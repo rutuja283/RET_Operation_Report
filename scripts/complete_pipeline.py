@@ -11,7 +11,7 @@ from generate_report import generate_all_plots
 from update_latex import update_latex_plots
 
 
-def run_complete_pipeline(month, year, operations_csv=None):
+def run_complete_pipeline(month, year, operations_csv=None, snowdepth_plot=None):
     """
     Run the complete pipeline:
     1. Convert PDFs to CSV (if needed)
@@ -22,6 +22,7 @@ def run_complete_pipeline(month, year, operations_csv=None):
         month: Month number (1-12)
         year: Year
         operations_csv: Path to operations schedule CSV
+        snowdepth_plot: Specific snow depth plot filename to use in report (if None, auto-selects)
     """
     print("="*60)
     print("RET Operations Report - Complete Pipeline")
@@ -47,7 +48,7 @@ def run_complete_pipeline(month, year, operations_csv=None):
     # Step 3: Update LaTeX
     print("\nStep 3: Updating LaTeX file...")
     try:
-        update_latex_plots(month, year)
+        update_latex_plots(month, year, snowdepth_plot=snowdepth_plot)
     except Exception as e:
         print(f"Error updating LaTeX: {e}")
         return False
@@ -61,18 +62,20 @@ def run_complete_pipeline(month, year, operations_csv=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python complete_pipeline.py <month> <year> [operations_csv]")
+        print("Usage: python complete_pipeline.py <month> <year> [operations_csv] [snowdepth_plot]")
         print("Example: python complete_pipeline.py 12 2025")
         print("Example: python complete_pipeline.py 12 2025 ../data/csv/operations.csv")
+        print("Example: python complete_pipeline.py 12 2025 ../data/csv/operations.csv 202512_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png")
         sys.exit(1)
     
     month = int(sys.argv[1])
     year = int(sys.argv[2])
-    operations_csv = sys.argv[3] if len(sys.argv) > 3 else None
+    operations_csv = sys.argv[3] if len(sys.argv) > 3 and not sys.argv[3].endswith('.png') else None
+    snowdepth_plot = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4].endswith('.png') else (sys.argv[3] if len(sys.argv) > 3 and sys.argv[3].endswith('.png') else None)
     
     if not (1 <= month <= 12):
         print("Error: Month must be between 1 and 12")
         sys.exit(1)
     
-    success = run_complete_pipeline(month, year, operations_csv=operations_csv)
+    success = run_complete_pipeline(month, year, operations_csv=operations_csv, snowdepth_plot=snowdepth_plot)
     sys.exit(0 if success else 1)

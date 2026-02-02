@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import BASE_DIR, PLOTS_DIR
 
 
-def update_latex_plots(month, year, main_tex_path=None):
+def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     """
     Update main.tex with new plot file references
     
@@ -21,6 +21,7 @@ def update_latex_plots(month, year, main_tex_path=None):
         month: Month number (1-12)
         year: Year
         main_tex_path: Path to main.tex (default: BASE_DIR/main.tex)
+        snowdepth_plot: Specific snow depth plot filename to use (if None, uses default or finds first available)
     """
     if main_tex_path is None:
         main_tex_path = BASE_DIR / "main.tex"
@@ -41,8 +42,29 @@ def update_latex_plots(month, year, main_tex_path=None):
     plot_files = {
         'operations': f"{year}{month:02d}_OperatingSchedule_Report.png",
         'precipitation': f"{year}{month:02d}_PrecipSummary_Report_v02.png",
-        'snowdepth': f"{year}{month:02d}_SnowDepthSummary_Report.png"
     }
+    
+    # Handle snow depth plot - use specified one or find first available
+    if snowdepth_plot:
+        plot_files['snowdepth'] = snowdepth_plot
+    else:
+        # Try default name first
+        default_snow = f"{year}{month:02d}_SnowDepthSummary_Report.png"
+        if (PLOTS_DIR / default_snow).exists():
+            plot_files['snowdepth'] = default_snow
+        else:
+            # Find first available snow depth plot for this month/year
+            snow_plots = list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png"))
+            if snow_plots:
+                # Default to La Sal Mtn vs Camp jackson if available
+                preferred = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+                if (PLOTS_DIR / preferred).exists():
+                    plot_files['snowdepth'] = preferred
+                else:
+                    plot_files['snowdepth'] = snow_plots[0].name
+                    print(f"Using first available snow depth plot: {plot_files['snowdepth']}")
+            else:
+                plot_files['snowdepth'] = default_snow
     
     # Check if plots exist
     for plot_type, filename in plot_files.items():
@@ -135,9 +157,10 @@ if __name__ == "__main__":
     
     month = int(sys.argv[1])
     year = int(sys.argv[2])
+    snowdepth_plot = sys.argv[3] if len(sys.argv) > 3 else None
     
     if not (1 <= month <= 12):
         print("Error: Month must be between 1 and 12")
         sys.exit(1)
     
-    update_latex_plots(month, year)
+    update_latex_plots(month, year, snowdepth_plot=snowdepth_plot)
