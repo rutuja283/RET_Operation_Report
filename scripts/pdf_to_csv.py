@@ -96,9 +96,9 @@ def extract_with_pdfplumber(pdf_path):
             # Find where the actual CSV data starts (skip metadata)
             # USDA SNOTEL files: metadata ends, then header line(s) starting with "Date,", then data
             csv_start_idx = None
-            header_idx = None
+            header_start_idx = None
             
-            # Look for header line starting with "Date,"
+            # First, find where header starts (line with "Date,")
             for i, line in enumerate(lines):
                 line_stripped = line.strip()
                 # Skip empty lines and comments
@@ -107,12 +107,25 @@ def extract_with_pdfplumber(pdf_path):
                 
                 # Look for header starting with "Date,"
                 if line_stripped.lower().startswith('date,') or line_stripped.lower().startswith('date\t'):
-                    header_idx = i
-                    # Data usually starts 1-3 lines after header
-                    csv_start_idx = i + 1
+                    header_start_idx = i
                     break
             
-            # If no "Date," header found, look for first data row (YYYY-MM-DD format)
+            # Now find where actual data starts (first line with YYYY-MM-DD date pattern)
+            if header_start_idx is not None:
+                # Look for first data row after header
+                for i in range(header_start_idx + 1, len(lines)):
+                    line_stripped = lines[i].strip()
+                    # Skip empty lines and comments
+                    if not line_stripped or line_stripped.startswith('#'):
+                        continue
+                    
+                    # Look for date pattern YYYY-MM-DD (SNOTEL format) - this is the actual data
+                    if re.match(r'^\d{4}-\d{2}-\d{2}', line_stripped):
+                        if ',' in line_stripped:  # Make sure it's CSV format
+                            csv_start_idx = i
+                            break
+            
+            # If no "Date," header found, look for first data row directly
             if csv_start_idx is None:
                 for i, line in enumerate(lines):
                     line_stripped = line.strip()
@@ -121,15 +134,15 @@ def extract_with_pdfplumber(pdf_path):
                         continue
                     
                     # Look for date pattern YYYY-MM-DD (SNOTEL format) with data
-                    if re.match(r'\d{4}-\d{2}-\d{2}', line_stripped):
-                        # Check if it has data (commas and numbers)
+                    if re.match(r'^\d{4}-\d{2}-\d{2}', line_stripped):
                         if ',' in line_stripped:
                             # Look backwards for header
-                            for j in range(i-1, max(0, i-5), -1):
+                            for j in range(i-1, max(0, i-10), -1):
                                 prev = lines[j].strip()
                                 if prev and not prev.startswith('#') and (',' in prev or '\t' in prev):
-                                    header_idx = j
-                                    break
+                                    if 'date' in prev.lower():
+                                        header_start_idx = j
+                                        break
                             csv_start_idx = i
                             break
             
@@ -138,14 +151,27 @@ def extract_with_pdfplumber(pdf_path):
                 return None
             
             # Extract header and data
-            if header_idx is not None:
-                # Combine multi-line header if needed
+            if header_start_idx is not None:
+                # Combine multi-line header (header can span multiple lines until data starts)
                 header_lines = []
-                for j in range(header_idx, min(header_idx + 3, csv_start_idx)):
+                for j in range(header_start_idx, csv_start_idx):
                     hline = lines[j].strip()
                     if hline and not hline.startswith('#'):
-                        header_lines.append(hline)
-                header = ' '.join(header_lines)
+                        # Remove newlines and extra spaces, but keep commas
+                        hline_clean = ' '.join(hline.split())
+                        header_lines.append(hline_clean)
+                # Join header lines, but preserve comma structure
+                # If lines end/start with commas, join directly; otherwise add space
+                header = ''
+                for i, hline in enumerate(header_lines):
+                    if i == 0:
+                        header = hline
+                    else:
+                        # If previous ends with comma or this starts with comma, join directly
+                        if header.endswith(',') or hline.startswith(','):
+                            header += hline
+                        else:
+                            header += ' ' + hline
             else:
                 # No header found, will use first data row to infer
                 header = None
