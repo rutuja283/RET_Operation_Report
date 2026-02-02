@@ -86,9 +86,9 @@ def update_latex_plots(month, year, main_tex_path=None):
     # Update snow depth caption
     snow_caption_pattern = r'\\caption\{Box and whisker plots demonstrating SNOTEL-measured climatological [^}]+\}'
     snow_caption_replacement = (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
-                               f'{month_name} snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
-                               f'The difference in monthly precipitation is shown in the bottom panel. ' +
-                               f'The red circle in each panel indicates values for {month_name} {year}.}}')
+                               month_name + r' snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
+                               r'The difference in monthly precipitation is shown in the bottom panel. ' +
+                               r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}}')
     content = re.sub(snow_caption_pattern, snow_caption_replacement, content, count=1)
     
     # Update Executive Summary dates

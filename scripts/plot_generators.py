@@ -170,25 +170,36 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     fig, ax = plt.subplots(figsize=(14, 6))
     
     # Plot operating periods as green background
-    month_ops = operations_df[
-        (operations_df['Date'] >= month_start) & 
-        (operations_df['Date'] <= month_end)
-    ]
-    dates = pd.date_range(start=month_start, end=month_end, freq='D')
-    
-    for date in dates:
-        day_ops = month_ops[month_ops['Date'].dt.date == date.date()]
-        if not day_ops.empty and day_ops['Operating'].any():
-            ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12),
-                      color='green', alpha=0.2, zorder=0)
+    if not operations_df.empty and 'Date' in operations_df.columns:
+        # Ensure Date is datetime
+        operations_df['Date'] = pd.to_datetime(operations_df['Date'], errors='coerce')
+        month_ops = operations_df[
+            (operations_df['Date'] >= month_start) & 
+            (operations_df['Date'] <= month_end)
+        ]
+        dates = pd.date_range(start=month_start, end=month_end, freq='D')
+        
+        for date in dates:
+            if not month_ops.empty and pd.api.types.is_datetime64_any_dtype(month_ops['Date']):
+                day_ops = month_ops[month_ops['Date'].dt.date == date.date()]
+                if not day_ops.empty and day_ops['Operating'].any():
+                    ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12),
+                              color='green', alpha=0.2, zorder=0)
+    else:
+        dates = pd.date_range(start=month_start, end=month_end, freq='D')
     
     # Plot precipitation for each station
     colors = plt.cm.tab10(np.linspace(0, 1, len(stations_data)))
-    for (station_name, (dates, values)), color in zip(stations_data.items(), colors):
+    for (station_name, (station_dates, values)), color in zip(stations_data.items(), colors):
+        # Ensure dates is datetime Series
+        if not isinstance(station_dates, pd.Series):
+            station_dates = pd.Series(station_dates)
+        station_dates = pd.to_datetime(station_dates, errors='coerce')
+        
         # Filter to month
-        mask = (dates >= month_start) & (dates <= month_end)
-        month_dates = dates[mask]
-        month_values = values[mask]
+        mask = (station_dates >= month_start) & (station_dates <= month_end)
+        month_dates = station_dates[mask]
+        month_values = values[mask] if isinstance(values, pd.Series) else pd.Series(values)[mask]
         
         if len(month_dates) > 0:
             ax.plot(month_dates, month_values, marker='o', label=station_name, 
@@ -219,6 +230,19 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
 
 def plot_snow_depth_boxplots(treatment_station, control_station, month, year, 
                              highlight_month=None, highlight_year=None, output_file=None):
+    """
+    Generate three-panel boxplot: Treatment, Control, and Difference
+    Shows only the specified month (not all months)
+    
+    Args:
+        treatment_station: Name of treatment station
+        control_station: Name of control station
+        month: Month number for the report (1-12)
+        year: Year for the report
+        highlight_month: Month to highlight (defaults to month)
+        highlight_year: Year to highlight (defaults to year)
+        output_file: Output file path (if None, auto-generates with station names)
+    """
     """
     Generate three-panel boxplot: Treatment, Control, and Difference
     
@@ -268,8 +292,9 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     control_df['month'] = control_df['Date'].dt.month
     control_df['year'] = control_df['Date'].dt.year
     
-    # Group by month for boxplots
-    month_names = [calendar.month_name[i] for i in range(1, 13)]
+    # Only show the month of interest
+    month_name = calendar.month_name[highlight_month] if highlight_month else calendar.month_name[month]
+    target_month = highlight_month if highlight_month else month
     
     treatment_groups = []
     control_groups = []
@@ -280,34 +305,34 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     highlight_vals = None
     highlight_label = None
     
-    for m in range(1, 13):
-        t_data = treatment_df[treatment_df['month'] == m]['Value'].dropna().values
-        c_data = control_df[control_df['month'] == m]['Value'].dropna().values
+    # Only process the target month
+    t_data = treatment_df[treatment_df['month'] == target_month]['Value'].dropna().values
+    c_data = control_df[control_df['month'] == target_month]['Value'].dropna().values
+    
+    if len(t_data) > 0 and len(c_data) > 0:
+        # Merge on date to calculate differences
+        t_month = treatment_df[treatment_df['month'] == target_month].set_index('Date')['Value']
+        c_month = control_df[control_df['month'] == target_month].set_index('Date')['Value']
         
-        if len(t_data) > 0 and len(c_data) > 0:
-            # Merge on date to calculate differences
-            t_month = treatment_df[treatment_df['month'] == m].set_index('Date')['Value']
-            c_month = control_df[control_df['month'] == m].set_index('Date')['Value']
+        merged = pd.DataFrame({'Treatment': t_month, 'Control': c_month})
+        merged = merged.dropna()
+        merged['Diff'] = merged['Treatment'] - merged['Control']
+        
+        if len(merged) > 0:
+            treatment_groups.append(t_data)
+            control_groups.append(c_data)
+            diff_groups.append(merged['Diff'].values)
+            labels.append(month_name)
             
-            merged = pd.DataFrame({'Treatment': t_month, 'Control': c_month})
-            merged = merged.dropna()
-            merged['Diff'] = merged['Treatment'] - merged['Control']
-            
-            if len(merged) > 0:
-                treatment_groups.append(t_data)
-                control_groups.append(c_data)
-                diff_groups.append(merged['Diff'].values)
-                labels.append(month_names[m-1])
-                
-                # Check if this is the highlight month
-                if highlight_month == m and highlight_year:
-                    highlight_idx = len(labels)  # 1-based for boxplot
-                    highlight_vals = {
-                        't': float(merged['Treatment'].mean()),
-                        'c': float(merged['Control'].mean()),
-                        'd': float(merged['Diff'].mean())
-                    }
-                    highlight_label = f"{month_names[m-1][:3]} {highlight_year}"
+            # Set highlight for current month/year
+            if highlight_year:
+                highlight_idx = 1  # Only one box, so index is 1
+                highlight_vals = {
+                    't': float(merged['Treatment'].mean()),
+                    'c': float(merged['Control'].mean()),
+                    'd': float(merged['Diff'].mean())
+                }
+                highlight_label = None  # Remove label
     
     if not labels:
         print("Warning: No overlapping data found")
@@ -340,22 +365,17 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     ax3.grid(axis="y", alpha=0.35)
     ax3.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
     
-    # Add highlight marker if specified
+    # Add highlight marker if specified (smaller dot, no label)
     if highlight_idx is not None and highlight_vals is not None:
-        def annotate_dot(ax, x, y, label):
+        def annotate_dot(ax, x, y):
             if x is not None and y is not None and np.isfinite(y):
-                ax.scatter([x], [y], s=80, color="red", edgecolors="black", 
-                          linewidths=2, zorder=20, marker='o')
-                if label:
-                    ax.annotate(label, (x, y), textcoords="offset points", 
-                              xytext=(8, 6), ha="left", va="bottom", fontsize=9, 
-                              color="red", weight='bold', zorder=21,
-                              bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
-                                      edgecolor='red', alpha=0.8))
+                # Smaller dot: s=40 instead of 80, thinner edge
+                ax.scatter([x], [y], s=40, color="red", edgecolors="black", 
+                          linewidths=1, zorder=20, marker='o')
         
-        annotate_dot(ax1, highlight_idx, highlight_vals['t'], highlight_label)
-        annotate_dot(ax2, highlight_idx, highlight_vals['c'], highlight_label)
-        annotate_dot(ax3, highlight_idx, highlight_vals['d'], highlight_label)
+        annotate_dot(ax1, highlight_idx, highlight_vals['t'])
+        annotate_dot(ax2, highlight_idx, highlight_vals['c'])
+        annotate_dot(ax3, highlight_idx, highlight_vals['d'])
     
     # Set consistent y-limits
     all_values = []
@@ -379,7 +399,11 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         ax2.set_ylim(y_min_final, y_max_final)
         ax3.set_ylim(y_min_final, y_max_final)
     
-    plt.tight_layout()
+    try:
+        plt.tight_layout()
+    except:
+        # If tight_layout fails, just adjust manually
+        plt.subplots_adjust(bottom=0.18, top=0.92, hspace=0.45, wspace=0.25)
     
     if output_file is None:
         output_file = PLOTS_DIR / f"{year}{month:02d}_SnowDepthSummary_Report.{PLOT_FORMAT}"

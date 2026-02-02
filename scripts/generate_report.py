@@ -145,19 +145,23 @@ def generate_all_plots(month, year, operations_csv=None,
     except Exception as e:
         print(f"   Error: {e}")
     
-    # 3. Generate snow depth boxplots for each treatment-control pair
-    print("\n3. Generating snow depth boxplots...")
+    # 3. Generate snow depth boxplots for ALL treatment-control combinations
+    print("\n3. Generating snow depth boxplots for all combinations...")
     try:
+        plot_count = 0
         for treatment in treatment_stations:
             for control in control_stations:
                 print(f"   {treatment} vs {control}...")
                 try:
-                    plot_snow_depth_boxplots(
+                    result = plot_snow_depth_boxplots(
                         treatment, control, month, year,
                         highlight_month=month, highlight_year=year
                     )
+                    if result:
+                        plot_count += 1
                 except Exception as e:
                     print(f"      Error: {e}")
+        print(f"   Generated {plot_count} boxplot combinations")
     except Exception as e:
         print(f"   Error: {e}")
     
