@@ -94,58 +94,92 @@ def extract_with_pdfplumber(pdf_path):
             lines = full_text.split('\n')
             
             # Find where the actual CSV data starts (skip metadata)
-            # Look for common CSV header patterns
+            # USDA SNOTEL files: metadata ends, then header line(s) starting with "Date,", then data
             csv_start_idx = None
-            for i, line in enumerate(lines):
-                line_lower = line.lower().strip()
-                # Look for CSV header indicators
-                if any(indicator in line_lower for indicator in [
-                    'date,', 'date ,', 'date\t',  # Date column
-                    'station,', 'station name,',  # Station column
-                    'precipitation', 'snow', 'temperature',  # Data columns
-                ]):
-                    # Check if it looks like a header (has commas or tabs)
-                    if ',' in line or '\t' in line:
-                        csv_start_idx = i
-                        break
+            header_idx = None
             
-            # If no clear header found, look for first line with date-like pattern
+            # Look for header line starting with "Date,"
+            for i, line in enumerate(lines):
+                line_stripped = line.strip()
+                # Skip empty lines and comments
+                if not line_stripped or line_stripped.startswith('#'):
+                    continue
+                
+                # Look for header starting with "Date,"
+                if line_stripped.lower().startswith('date,') or line_stripped.lower().startswith('date\t'):
+                    header_idx = i
+                    # Data usually starts 1-3 lines after header
+                    csv_start_idx = i + 1
+                    break
+            
+            # If no "Date," header found, look for first data row (YYYY-MM-DD format)
             if csv_start_idx is None:
                 for i, line in enumerate(lines):
-                    # Look for date patterns (YYYY-MM-DD, MM/DD/YYYY, etc.)
-                    if re.search(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', line):
-                        # Check if previous line might be header
-                        if i > 0 and (',' in lines[i-1] or '\t' in lines[i-1]):
-                            csv_start_idx = i - 1
-                        else:
+                    line_stripped = line.strip()
+                    # Skip empty lines and comments
+                    if not line_stripped or line_stripped.startswith('#'):
+                        continue
+                    
+                    # Look for date pattern YYYY-MM-DD (SNOTEL format) with data
+                    if re.match(r'\d{4}-\d{2}-\d{2}', line_stripped):
+                        # Check if it has data (commas and numbers)
+                        if ',' in line_stripped:
+                            # Look backwards for header
+                            for j in range(i-1, max(0, i-5), -1):
+                                prev = lines[j].strip()
+                                if prev and not prev.startswith('#') and (',' in prev or '\t' in prev):
+                                    header_idx = j
+                                    break
                             csv_start_idx = i
-                        break
+                            break
             
             if csv_start_idx is None:
                 print(f"  Could not find CSV data start in {pdf_path.name}")
                 return None
             
+            # Extract header and data
+            if header_idx is not None:
+                # Combine multi-line header if needed
+                header_lines = []
+                for j in range(header_idx, min(header_idx + 3, csv_start_idx)):
+                    hline = lines[j].strip()
+                    if hline and not hline.startswith('#'):
+                        header_lines.append(hline)
+                header = ' '.join(header_lines)
+            else:
+                # No header found, will use first data row to infer
+                header = None
+            
             # Extract CSV data (skip metadata)
             csv_lines = lines[csv_start_idx:]
             
-            # Try to parse as CSV
-            import io
-            csv_text = '\n'.join(csv_lines)
+            # Filter out empty lines and comments
+            csv_lines = [line for line in csv_lines if line.strip() and not line.strip().startswith('#')]
             
+            # Combine header and data
+            if header:
+                csv_text = header + '\n' + '\n'.join(csv_lines)
+            else:
+                csv_text = '\n'.join(csv_lines)
+            
+            # Try to parse as CSV
             # Try comma-separated first
             try:
-                df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip', engine='python')
+                df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip', engine='python', skipinitialspace=True)
                 if len(df) > 0 and len(df.columns) > 1:
+                    # Clean up column names (remove extra spaces, newlines)
+                    df.columns = [str(col).strip().replace('\n', ' ') for col in df.columns]
                     return df
-            except:
+            except Exception as e:
                 pass
             
             # Try tab-separated
             try:
-                df = pd.read_csv(io.StringIO(csv_text), sep='\t', on_bad_lines='skip', engine='python')
+                df = pd.read_csv(io.StringIO(csv_text), sep='\t', on_bad_lines='skip', engine='python', skipinitialspace=True)
                 if len(df) > 0 and len(df.columns) > 1:
+                    df.columns = [str(col).strip().replace('\n', ' ') for col in df.columns]
                     return df
-            except:
+            except Exception as e:
                 pass
             
             # Fallback: try extracting tables
