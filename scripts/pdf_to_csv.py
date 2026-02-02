@@ -80,11 +80,41 @@ def extract_with_pdfplumber(pdf_path):
         all_tables = []
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
+                # Try extracting tables first
                 tables = page.extract_tables()
                 for table in tables:
-                    if table:
-                        df = pd.DataFrame(table[1:], columns=table[0])
-                        all_tables.append(df)
+                    if table and len(table) > 1:  # Need at least header + data row
+                        try:
+                            df = pd.DataFrame(table[1:], columns=table[0])
+                            all_tables.append(df)
+                        except Exception as e:
+                            # If table structure is irregular, try to extract as text
+                            continue
+                
+                # If no tables found, try extracting text and parsing
+                if not tables:
+                    text = page.extract_text()
+                    if text:
+                        # Try to parse text as CSV-like data
+                        lines = text.split('\n')
+                        # Look for lines that might be data rows
+                        data_lines = [line for line in lines if line.strip() and 
+                                    any(char.isdigit() for char in line)]
+                        if data_lines:
+                            # Try to create a simple DataFrame from text lines
+                            # This is a fallback - may need manual cleanup
+                            try:
+                                # Split by whitespace or common delimiters
+                                rows = []
+                                for line in data_lines[:100]:  # Limit to first 100 lines
+                                    parts = line.split()
+                                    if len(parts) >= 2:  # At least 2 columns
+                                        rows.append(parts)
+                                if rows:
+                                    df = pd.DataFrame(rows)
+                                    all_tables.append(df)
+                            except:
+                                pass
         
         if all_tables:
             df = pd.concat(all_tables, ignore_index=True)
@@ -127,13 +157,21 @@ def convert_pdf_to_csv(pdf_path, output_dir=None):
     
     if HAS_PDFPLUMBER:
         df = extract_with_pdfplumber(pdf_path)
+        if df is None:
+            print(f"  pdfplumber: No tables found in {pdf_name}")
     
     if df is None and HAS_TABULA:
+        print(f"  Trying tabula as fallback...")
         df = extract_with_tabula(pdf_path)
     
     if df is None:
-        print(f"Warning: Could not extract data from {pdf_name}. Install tabula-py or pdfplumber.")
-        print("  pip install tabula-py pdfplumber")
+        print(f"Warning: Could not extract data from {pdf_name}.")
+        print(f"  pdfplumber: {'Available' if HAS_PDFPLUMBER else 'Not installed'}")
+        print(f"  tabula-py: {'Available' if HAS_TABULA else 'Not installed'}")
+        if not HAS_PDFPLUMBER:
+            print("  Install pdfplumber: pip install pdfplumber")
+        if HAS_TABULA and not HAS_PDFPLUMBER:
+            print("  Note: tabula-py requires Java. Install: brew install openjdk")
         return None
     
     # Clean the dataframe
