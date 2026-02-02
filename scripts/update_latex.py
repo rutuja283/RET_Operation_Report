@@ -103,19 +103,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         return r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
     content = re.sub(precip_caption_pattern, precip_caption_replacer, content, count=1)
     
-    # Update snow depth plot
-    snow_pattern = r'\\includegraphics\[width=0\.95\\textwidth\]\{[^}]+\}'
-    snow_matches = list(re.finditer(snow_pattern, content))
-    if snow_matches:
-        start, end = snow_matches[0].span()
-        # Use lambda to avoid regex escape interpretation
-        snow_replacement = r'\includegraphics[width=0.95\textwidth]{' + plot_files["snowdepth"] + '}'
-        content = content[:start] + snow_replacement + content[end:]
-    
-    # Replace single boxplot with all boxplot combinations
-    # Find the boxplot figure section
-    snow_figure_pattern = r'\\begin\{figure\}\[h!\]\s*\\centering\s*\\includegraphics\[width=0\.95\\textwidth\]\{[^}]*SnowDepth[^}]+\}\s*\\caption\{[^}]+\}\s*\\end\{figure\}'
-    
+    # Replace all boxplot figures with all boxplot combinations
     # Find all boxplot files for this month/year
     boxplot_files = sorted(list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png")))
     
@@ -141,13 +129,26 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
                              r'\end{figure}' + '\n\n')
                 boxplot_figures.append(figure_code)
         
-        # Replace the single boxplot with all combinations
-        matches = list(re.finditer(snow_figure_pattern, content, re.DOTALL))
+        # Find the section from first SnowDepth figure to before Radiometer subsection
+        # This pattern matches all consecutive SnowDepth figures
+        snow_section_pattern = r'(\\begin\{figure\}\[h!\]\s*\\centering\s*\\includegraphics\[width=0\.95\\textwidth\]\{[^}]*SnowDepth[^}]+\}\s*\\caption\{[^}]+\}\s*\\end\{figure\}(?:\s*\\begin\{figure\}[^}]*SnowDepth[^}]*\\end\{figure\})*)\s*(?=\\subsection\{Analysis of Radiometer Data\})'
+        
+        matches = list(re.finditer(snow_section_pattern, content, re.DOTALL))
         if matches:
+            # Replace the entire boxplot section
             start, end = matches[0].span()
             replacement = ''.join(boxplot_figures)
             content = content[:start] + replacement + content[end:]
-            print(f"Replaced single boxplot with {len(boxplot_figures)} boxplot combinations")
+            print(f"Replaced boxplot section with {len(boxplot_figures)} boxplot combinations")
+        else:
+            # Fallback: find just the first SnowDepth figure
+            snow_figure_pattern = r'\\begin\{figure\}\[h!\]\s*\\centering\s*\\includegraphics\[width=0\.95\\textwidth\]\{[^}]*SnowDepth[^}]+\}\s*\\caption\{[^}]+\}\s*\\end\{figure\}'
+            matches = list(re.finditer(snow_figure_pattern, content, re.DOTALL))
+            if matches:
+                start, end = matches[0].span()
+                replacement = ''.join(boxplot_figures)
+                content = content[:start] + replacement + content[end:]
+                print(f"Replaced single boxplot with {len(boxplot_figures)} boxplot combinations")
     
     # Update Executive Summary dates
     date_pattern = r'This report covers \d+ days from \d+/\d+/\d+ to \d+/\d+/\d+\.'
