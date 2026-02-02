@@ -52,13 +52,15 @@ def update_latex_plots(month, year, main_tex_path=None):
     
     # Update operations schedule plot
     ops_pattern = r'\\includegraphics\[width=0\.85\\textwidth\]\{[^}]+\}'
-    ops_replacement = r'\includegraphics[width=0.85\textwidth]{' + plot_files["operations"] + '}'
+    # Escape backslashes in replacement (re.sub interprets replacement as regex)
+    ops_replacement = r'\\includegraphics[width=0.85\\textwidth]{' + plot_files["operations"] + '}'
     content = re.sub(ops_pattern, ops_replacement, content, count=1)
     
     # Update caption for operations schedule
     ops_caption_pattern = r'\\caption\{WETA operating schedule during [^}]+\}'
-    ops_caption_replacement = (r'\caption{WETA operating schedule during ' + 
-                              f'{month_name} {year}. Green shading indicates periods of operation.}}')
+    # Escape backslashes in replacement
+    ops_caption_replacement = (r'\\caption{WETA operating schedule during ' + 
+                              month_name + ' ' + str(year) + r'. Green shading indicates periods of operation.}}')
     content = re.sub(ops_caption_pattern, ops_caption_replacement, content, count=1)
     
     # Update precipitation plot
@@ -67,12 +69,14 @@ def update_latex_plots(month, year, main_tex_path=None):
     matches = list(re.finditer(precip_pattern, content))
     if len(matches) >= 2:
         start, end = matches[1].span()
-        precip_replacement = r'\includegraphics[width=0.85\textwidth]{' + plot_files["precipitation"] + '}'
+        # Escape backslashes in replacement
+        precip_replacement = r'\\includegraphics[width=0.85\\textwidth]{' + plot_files["precipitation"] + '}'
         content = content[:start] + precip_replacement + content[end:]
     
     # Update precipitation caption
     precip_caption_pattern = r'\\caption\{Summary of daily accumulated precipitation[^}]+\}'
-    precip_caption_replacement = r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
+    # Escape backslashes in replacement
+    precip_caption_replacement = r'\\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
     content = re.sub(precip_caption_pattern, precip_caption_replacement, content, count=1)
     
     # Update snow depth plot
@@ -80,12 +84,14 @@ def update_latex_plots(month, year, main_tex_path=None):
     snow_matches = list(re.finditer(snow_pattern, content))
     if snow_matches:
         start, end = snow_matches[0].span()
-        snow_replacement = r'\includegraphics[width=0.95\textwidth]{' + plot_files["snowdepth"] + '}'
+        # Escape backslashes in replacement
+        snow_replacement = r'\\includegraphics[width=0.95\\textwidth]{' + plot_files["snowdepth"] + '}'
         content = content[:start] + snow_replacement + content[end:]
     
     # Update snow depth caption
     snow_caption_pattern = r'\\caption\{Box and whisker plots demonstrating SNOTEL-measured climatological [^}]+\}'
-    snow_caption_replacement = (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
+    # Escape backslashes in replacement
+    snow_caption_replacement = (r'\\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
                                month_name + r' snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
                                r'The difference in monthly precipitation is shown in the bottom panel. ' +
                                r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}}')
@@ -102,13 +108,13 @@ def update_latex_plots(month, year, main_tex_path=None):
     
     # Update focus month in Executive Summary
     focus_pattern = r'the focus of this report is on the \w+ \d+ operating period\.'
-    focus_replacement = f'the focus of this report is on the {month_name} {year} operating period.'
+    focus_replacement = 'the focus of this report is on the ' + month_name + ' ' + str(year) + ' operating period.'
     content = re.sub(focus_pattern, focus_replacement, content, flags=re.IGNORECASE, count=1)
     
     # Update document name in Control Page
     doc_pattern = r'PI25003\\_La\\_Sal\\_OpsReport\\_[^}]+\.pdf'
     month_abbr_upper = month_abbr.upper()
-    doc_replacement = f'PI25003\\_La\\_Sal\\_OpsReport\\_{month_abbr_upper}{year}\\_v01.pdf'
+    doc_replacement = r'PI25003\_La\_Sal\_OpsReport\_' + month_abbr_upper + str(year) + r'\_v01.pdf'
     content = re.sub(doc_pattern, doc_replacement, content, count=1)
     
     # Write updated content
