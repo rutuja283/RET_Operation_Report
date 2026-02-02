@@ -14,10 +14,10 @@ data/raw/*.pdf
 data/csv/*.csv
 !data/csv/.gitkeep
 
-# Plots (generated)
-plots/*.png
-plots/*.jpg
-!plots/.gitkeep
+# Plots (generated) - now tracked in git for Overleaf sync
+# plots/*.png
+# plots/*.jpg
+# !plots/.gitkeep
 
 # Output
 output/*

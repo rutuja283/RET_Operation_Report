@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from config import BASE_DIR, PLOTS_DIR
+from config import BASE_DIR, PLOTS_DIR, TREATMENT_STATIONS, CONTROL_STATIONS
 
 
 def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
@@ -112,15 +112,42 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         snow_replacement = r'\includegraphics[width=0.95\textwidth]{' + plot_files["snowdepth"] + '}'
         content = content[:start] + snow_replacement + content[end:]
     
-    # Update snow depth caption
-    snow_caption_pattern = r'\\caption\{Box and whisker plots demonstrating SNOTEL-measured climatological [^}]+\}'
-    # Use function to return properly escaped string
-    def snow_caption_replacer(match):
-        return (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
-                month_name + r' snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
-                r'The difference in monthly precipitation is shown in the bottom panel. ' +
-                r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}}')
-    content = re.sub(snow_caption_pattern, snow_caption_replacer, content, count=1)
+    # Replace single boxplot with all boxplot combinations
+    # Find the boxplot figure section
+    snow_figure_pattern = r'\\begin\{figure\}\[h!\]\s*\\centering\s*\\includegraphics\[width=0\.95\\textwidth\]\{[^}]*SnowDepth[^}]+\}\s*\\caption\{[^}]+\}\s*\\end\{figure\}'
+    
+    # Find all boxplot files for this month/year
+    boxplot_files = sorted(list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png")))
+    
+    if boxplot_files:
+        # Create LaTeX code for all boxplots
+        boxplot_figures = []
+        for boxplot_file in boxplot_files:
+            filename = boxplot_file.name
+            # Extract station names from filename
+            parts = filename.replace(f"{year}{month:02d}_SnowDepth_", "").replace(".png", "").split("_vs_")
+            if len(parts) == 2:
+                treatment = parts[0].replace("_", " ")
+                control = parts[1].replace("_", " ")
+                
+                figure_code = (r'\begin{figure}[h!]' + '\n' +
+                             r'  \centering' + '\n' +
+                             r'  \includegraphics[width=0.95\textwidth]{' + filename + '}' + '\n' +
+                             r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' +
+                             month_name + r' snow depth at (top left) ' + treatment + 
+                             r', and (top right) ' + control + 
+                             r'. The difference in monthly snow depth is shown in the bottom panel. ' +
+                             r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}' + '\n' +
+                             r'\end{figure}' + '\n\n')
+                boxplot_figures.append(figure_code)
+        
+        # Replace the single boxplot with all combinations
+        matches = list(re.finditer(snow_figure_pattern, content, re.DOTALL))
+        if matches:
+            start, end = matches[0].span()
+            replacement = ''.join(boxplot_figures)
+            content = content[:start] + replacement + content[end:]
+            print(f"Replaced single boxplot with {len(boxplot_figures)} boxplot combinations")
     
     # Update Executive Summary dates
     date_pattern = r'This report covers \d+ days from \d+/\d+/\d+ to \d+/\d+/\d+\.'
