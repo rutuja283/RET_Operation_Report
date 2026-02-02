@@ -122,14 +122,14 @@ def convert_pdf_to_csv(pdf_path, output_dir=None):
     
     print(f"Converting {pdf_name} to CSV...")
     
-    # Try extraction methods in order
+    # Try extraction methods in order (prefer pdfplumber - no Java needed)
     df = None
     
-    if HAS_TABULA:
-        df = extract_with_tabula(pdf_path)
-    
-    if df is None and HAS_PDFPLUMBER:
+    if HAS_PDFPLUMBER:
         df = extract_with_pdfplumber(pdf_path)
+    
+    if df is None and HAS_TABULA:
+        df = extract_with_tabula(pdf_path)
     
     if df is None:
         print(f"Warning: Could not extract data from {pdf_name}. Install tabula-py or pdfplumber.")
