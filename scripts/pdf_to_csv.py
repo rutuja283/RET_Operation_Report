@@ -1,11 +1,13 @@
 """
 Convert PDF station data files to CSV format, removing metadata
+Handles USDA SNOTEL CSV exports that have been saved as PDFs
 """
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
 import re
+import io
 
 # Try to import PDF extraction libraries
 try:
@@ -75,53 +77,97 @@ def extract_with_tabula(pdf_path):
 
 
 def extract_with_pdfplumber(pdf_path):
-    """Extract tables using pdfplumber"""
+    """Extract tables using pdfplumber, handling USDA SNOTEL CSV exports"""
     try:
         all_tables = []
+        all_text = []
+        
         with pdfplumber.open(pdf_path) as pdf:
+            # Extract all text from all pages
             for page in pdf.pages:
-                # Try extracting tables first
+                text = page.extract_text()
+                if text:
+                    all_text.append(text)
+            
+            # Combine all text
+            full_text = '\n'.join(all_text)
+            lines = full_text.split('\n')
+            
+            # Find where the actual CSV data starts (skip metadata)
+            # Look for common CSV header patterns
+            csv_start_idx = None
+            for i, line in enumerate(lines):
+                line_lower = line.lower().strip()
+                # Look for CSV header indicators
+                if any(indicator in line_lower for indicator in [
+                    'date,', 'date ,', 'date\t',  # Date column
+                    'station,', 'station name,',  # Station column
+                    'precipitation', 'snow', 'temperature',  # Data columns
+                ]):
+                    # Check if it looks like a header (has commas or tabs)
+                    if ',' in line or '\t' in line:
+                        csv_start_idx = i
+                        break
+            
+            # If no clear header found, look for first line with date-like pattern
+            if csv_start_idx is None:
+                for i, line in enumerate(lines):
+                    # Look for date patterns (YYYY-MM-DD, MM/DD/YYYY, etc.)
+                    if re.search(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', line):
+                        # Check if previous line might be header
+                        if i > 0 and (',' in lines[i-1] or '\t' in lines[i-1]):
+                            csv_start_idx = i - 1
+                        else:
+                            csv_start_idx = i
+                        break
+            
+            if csv_start_idx is None:
+                print(f"  Could not find CSV data start in {pdf_path.name}")
+                return None
+            
+            # Extract CSV data (skip metadata)
+            csv_lines = lines[csv_start_idx:]
+            
+            # Try to parse as CSV
+            import io
+            csv_text = '\n'.join(csv_lines)
+            
+            # Try comma-separated first
+            try:
+                df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip', engine='python')
+                if len(df) > 0 and len(df.columns) > 1:
+                    return df
+            except:
+                pass
+            
+            # Try tab-separated
+            try:
+                df = pd.read_csv(io.StringIO(csv_text), sep='\t', on_bad_lines='skip', engine='python')
+                if len(df) > 0 and len(df.columns) > 1:
+                    return df
+            except:
+                pass
+            
+            # Fallback: try extracting tables
+            for page in pdf.pages:
                 tables = page.extract_tables()
                 for table in tables:
-                    if table and len(table) > 1:  # Need at least header + data row
+                    if table and len(table) > 1:
                         try:
                             df = pd.DataFrame(table[1:], columns=table[0])
                             all_tables.append(df)
-                        except Exception as e:
-                            # If table structure is irregular, try to extract as text
+                        except:
                             continue
-                
-                # If no tables found, try extracting text and parsing
-                if not tables:
-                    text = page.extract_text()
-                    if text:
-                        # Try to parse text as CSV-like data
-                        lines = text.split('\n')
-                        # Look for lines that might be data rows
-                        data_lines = [line for line in lines if line.strip() and 
-                                    any(char.isdigit() for char in line)]
-                        if data_lines:
-                            # Try to create a simple DataFrame from text lines
-                            # This is a fallback - may need manual cleanup
-                            try:
-                                # Split by whitespace or common delimiters
-                                rows = []
-                                for line in data_lines[:100]:  # Limit to first 100 lines
-                                    parts = line.split()
-                                    if len(parts) >= 2:  # At least 2 columns
-                                        rows.append(parts)
-                                if rows:
-                                    df = pd.DataFrame(rows)
-                                    all_tables.append(df)
-                            except:
-                                pass
-        
-        if all_tables:
-            df = pd.concat(all_tables, ignore_index=True)
-            return df
-        return None
+            
+            if all_tables:
+                df = pd.concat(all_tables, ignore_index=True)
+                return df
+            
+            return None
     except Exception as e:
         print(f"Error with pdfplumber: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -191,7 +237,12 @@ def convert_pdf_to_csv(pdf_path, output_dir=None):
 def convert_all_pdfs(pdf_dir=None):
     """Convert all PDF files in directory"""
     if pdf_dir is None:
-        pdf_dir = BASE_DIR
+        # Check raw folder first, then root directory
+        raw_dir = BASE_DIR / "data" / "raw"
+        if raw_dir.exists() and list(raw_dir.glob("*.pdf")):
+            pdf_dir = raw_dir
+        else:
+            pdf_dir = BASE_DIR
     
     pdf_dir = Path(pdf_dir)
     pdf_files = list(pdf_dir.glob("*.pdf"))
