@@ -48,22 +48,21 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     if snowdepth_plot:
         plot_files['snowdepth'] = snowdepth_plot
     else:
-        # Try default name first
-        default_snow = f"{year}{month:02d}_SnowDepthSummary_Report.png"
-        if (PLOTS_DIR / default_snow).exists():
-            plot_files['snowdepth'] = default_snow
+        # Prefer new station-specific files over old default name
+        # Default to La Sal Mtn vs Camp jackson if available (matches report text)
+        preferred = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+        if (PLOTS_DIR / preferred).exists():
+            plot_files['snowdepth'] = preferred
+            print(f"Using preferred snow depth plot: {plot_files['snowdepth']}")
         else:
             # Find first available snow depth plot for this month/year
             snow_plots = list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png"))
             if snow_plots:
-                # Default to La Sal Mtn vs Camp jackson if available
-                preferred = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
-                if (PLOTS_DIR / preferred).exists():
-                    plot_files['snowdepth'] = preferred
-                else:
-                    plot_files['snowdepth'] = snow_plots[0].name
-                    print(f"Using first available snow depth plot: {plot_files['snowdepth']}")
+                plot_files['snowdepth'] = snow_plots[0].name
+                print(f"Using first available snow depth plot: {plot_files['snowdepth']}")
             else:
+                # Fallback to old default name
+                default_snow = f"{year}{month:02d}_SnowDepthSummary_Report.png"
                 plot_files['snowdepth'] = default_snow
     
     # Check if plots exist
