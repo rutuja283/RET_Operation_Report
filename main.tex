@@ -1,0 +1,360 @@
+% =========================================================
+% La Sal Ops Report (Jan 2026) - Concise RET branded template
+% - Cover imported from PDF
+% - RET logo centered on every page except cover
+% - No chapters (uses section headings like Word)
+% - titlesec formatting for headings
+% =========================================================
+\documentclass[11pt]{article}
+
+% -------------------------
+% Page + packages
+% -------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{pdfpages}
+\usepackage{fancyhdr}
+\usepackage[table]{xcolor} % Make sure you include this in the preamble
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{colortbl}  % For row coloring and cell borders
+\usepackage{subcaption}  % For subfigures
+\documentclass{article}
+\usepackage[table]{xcolor}       % for coloring table rows
+\usepackage{longtable}           % for long tables
+\usepackage{array}               % for column formatting
+\usepackage{makecell}    
+\documentclass{article}
+\usepackage[table]{xcolor}       % for coloring table rows
+\usepackage{longtable}           % for long tables
+\usepackage{array}               % for column formatting
+\usepackage{makecell}            % for nicer line breaks in headers
+\usepackage{ragged2e}            % for text alignment inside cells% for nicer line breaks in headers
+% -------------------------
+% Hyperref setup - TOC in black, other links in blue
+% -------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,      % TOC links in black
+  urlcolor=blue,
+  citecolor=blue
+}
+
+% -------------------------
+% Concise spacing controls
+% -------------------------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}          % tighter than before
+\linespread{1.08}                  % tighter than 1.5x; closer to Word corporate reports
+
+% Tighter lists everywhere
+\setlist[itemize]{topsep=3pt, itemsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=*}
+\setlist[enumerate]{topsep=3pt, itemsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=*}
+
+% -------------------------
+% Section numbering like Word: "1  Control Page"
+% -------------------------
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+
+\renewcommand\thesection{\arabic{section}}
+\renewcommand\thesubsection{\thesection.\arabic{subsection}}
+
+% Section title format: "1  Executive Summary" with italic title (Word-like)
+\titleformat{\section}
+  {\large\bfseries}         % number style
+  {\thesection}             % label
+  {1em}                     % spacing between number and title
+  {\itshape}                % title style (italic like your screenshot)
+
+% Subsection: "2.1  Operational Summary"
+\titleformat{\subsection}
+  {\normalsize\bfseries}
+  {\thesubsection}
+  {1em}
+  {\bfseries}
+
+% Tighten vertical whitespace around headings (concise)
+\titlespacing*{\section}{0pt}{8pt}{6pt}
+\titlespacing*{\subsection}{0pt}{6pt}{4pt}
+
+% =========================================================
+% Header / Footer — centered RET logo on ALL pages after cover
+% =========================================================
+\setlength{\headheight}{70pt}  % larger header space for bigger logo
+\setlength{\headsep}{16pt}
+\renewcommand{\headrulewidth}{0pt}
+
+\newcommand{\RETHeaderLogo}{%
+  \includegraphics[height=78pt]{header.png}%
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\RETHeaderLogo}
+\fancyfoot[C]{\thepage}
+
+% IMPORTANT: some pages may switch to plain; force same header there too
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \fancyhead[C]{\RETHeaderLogo}
+  \fancyfoot[C]{\thepage}
+}
+
+% =========================================================
+% Table formatting: cell borders and row highlighting
+% =========================================================
+% Define colors for row highlighting
+\definecolor{greenhighlight}{RGB}{198, 224, 180}  % Light green for WETA on rows
+\definecolor{tableborder}{RGB}{150, 150, 150}     % Darker gray for better cell borders
+\definecolor{headerbg}{RGB}{230, 230, 230}        % Light gray for header background
+
+% =========================================================
+\begin{document}
+
+% =========================================================
+% Cover Page (Imported from PDF – NO header/footer)
+% =========================================================
+\includepdf[
+  pages=1,
+  pagecommand={\thispagestyle{empty}}
+]{coverpage_new.pdf}
+
+% Reset numbering after cover
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\pagestyle{fancy}
+
+\tableofcontents
+\clearpage
+
+% =========================
+% 1 Control Page
+% =========================
+\section{Control Page}
+
+\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_Jan2026\_v01.pdf\\
+\textbf{Revision:}\hspace{0.98em}      1.0
+
+\vspace{7pt}
+
+\textbf{Revision History}
+
+% Improved table formatting with better borders and spacing
+\renewcommand{\arraystretch}{1.3}
+\arrayrulecolor{tableborder}
+\setlength{\arrayrulewidth}{0.8pt}
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.2} % Adds a bit of vertical padding
+% \usepackage[table]{xcolor} % Make sure you include this in the preamble
+\definecolor{headerbg}{gray}{0.85} % Light gray header background
+
+\begin{tabular}{|p{1.2cm}|p{7.2cm}|p{4.1cm}|p{2.0cm}|}
+\hline
+\rowcolor{headerbg}
+\textbf{Ver \#} & \textbf{Comments} & \textbf{Author} & \textbf{Date} \\
+\hline
+0.0c & Original Document Development -- Draft &
+Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 01/13/2026 \\
+\hline
+1.0 & Released for External Review &
+Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 01/14/2026 \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\clearpage
+
+% =========================
+% 2 Executive Summary
+% =========================
+\section{Executive Summary}
+
+This report provides a preliminary review of the Weather Enhancement Technology Array (WETA)
+installed by Rain Enhancement Technologies (RET) on the Flat Iron Mesa, outside Moab, Utah.
+WETA is a self-sufficient and ``off grid'' solution installed to provide enhancement of precipitation
+in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. The focus of this report is on the December 2025 operating period.
+
+\subsection{Operational Summary}
+
+\begin{enumerate}
+  \item This report covers 31 days from 12/01/2025 to 12/31/2025.
+  \begin{enumerate}[label=\alph*.]
+    \item WETA operated on thirteen days in December 2025.
+    \item Precipitation was observed on twelve of those days.
+    \item Operations were suspended from 12/23 through 12/25 to avoid significant rainfall on snowpack at high altitude.
+  \end{enumerate}
+  \item December 2025 was a climatologically dry month, despite the occurrence of precipitation on twelve days.
+  \item Relatively warm and dry conditions, coupled with the rain event on 12/23-12/25, resulted in a reduction of snowpack during the month. Some of this loss has already been recuperated in January.
+  \item Despite the month being relatively dry, the evidence presented in this report supports the likelihood that precipitation was enhanced by WETA over the La Sal range.
+  \item Radiometrics radiometer data is being processed. Preliminary analysis indicates orographic enhancement of vertically-integrated liquid water over the La Sal range.
+  \item Power issues related to the radiomenter elaborated in the previous report are ongoing.
+  \begin{enumerate}[label=\alph*.]
+    \item Changes implemented remotely to ``work around'' until full repair implemented.
+    \item Generator installation expected early February 2026.
+  \end{enumerate}
+\end{enumerate}
+
+\subsection{Actions and Improvements}
+
+\begin{enumerate}
+  \item December precipitation and snow pack depth was evaluated against a historical baseline. 
+  \item Addition of load shedding and backup generator for improved power reliability on site (planned for Jan / Feb 2026).
+  \item Installation of further instrumentation in La Sal Ranges (planned Mar/Apr 2026).
+  \item For each event, identification of treatment and control probabilities based on HySPLIT simulations (next reporting cycle).
+  \item WETA operations will continue to target predicted precipitation events that are not considered adverse weather conditions or impacting snow pack.
+\end{enumerate}
+
+\clearpage
+
+% =========================
+% 3 Operations Summary
+% =========================
+\section{Operations Summary}
+
+Figure 1 details the operating schedule during the reporting period.
+WETA was operated during periods when forecasts indicated any chance of precipitation over the target area, including marginal cases involving scattered light showers. Operations were suspended from 23 to 25 December due to the likelihood of moderate rainfall over high-altitude snowpack.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.85\textwidth]{Dec2025_OperatingSchedule_Report.png}
+  \caption{WETA operating schedule during December 2025. Green shading indicates periods of operation.}
+\end{figure}
+
+\clearpage
+
+% =========================
+% 4 Data and Analysis
+% =========================
+\section{Data and Analysis}
+
+\subsection{Summary of Precipitation Events}
+
+December 2025 was a relatively dry month. Figure 2 presents the daily time-series of precipitation measured at weather stations and SNOTEL in the region. Intermittent periods of light showers occurred during the first three weeks of December. WETA was operational during all but two of these marginal events. The most significant period of precipitation began on 24 December and terminated on 28th December. WETA was operational for all but the beginning of this event. The late start was due to concern about rain over snowpack. 
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.85\textwidth]{Dec2025_PrecipSummary_Report_v02.png}
+  \caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}
+\end{figure}
+
+
+
+\clearpage
+
+\subsection{Evaluation of Snow Pack Enhancement}
+
+Snow pack enhancement was evident in the target area. Climatological snow-depth baselines have been calculated at SNOTEL sites inside the target area as well as outside (but nearby). Figure 3 presents a comparison of two such sites: La Sal Mountain and Camp Jackson. The SNOTEL site at La Sal Mountain is at an elevation of 9580 ft and is inside the treatment area. Camp Jackson is located at 8840 ft in the Abajo Mountains to the south and outside of the treatment area. Both sites are at a similar altitude, receive similar annual snowfall, and are subject to a similar synoptic environment. The comparison presented in Figure 3 reveals the following:
+
+
+\begin{enumerate}
+  \item In a typical year, snow pack depth in the La Sal range is similar to that in the Abajo mountains.
+  \item Both sites had a much shallower snowpack than average in December 2025 (see red circles in Fig.3).
+  \item Despite the dry conditions, La Sal maintained a deeper snowpack than Camp Jackson. The difference was above the climatological mean.
+\end{enumerate}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.95\textwidth]{Dec2025_SnowDepthSummary_Report.png}
+  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. The difference in monthly precipitation is shown in the bottom panel. The red circle in each panel indicates values for December 2025. }
+\end{figure}
+
+\subsection{Analysis of Radiometer Data}
+
+Radiometer-estimated liquid water content indicated a significant increase in cloud liquid water over La Sal during the active period at the end of December 2025. Fig. 4 presents the difference in vertically-integrated liquid water between two azimuthal directions -- one to the northeast directed towards the La Sal range, and one directed vertically. The higher values over the La Sal range were evident both before and after December 26th when WETA was suspended and operating, respectively. A longer record of analysis will indicate whether WETA operations amplify this apparent orographic effect.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.55\textwidth]{Radiometer_VILWDiff_Dec2025.png}
+  \caption{Low-pass filtered difference in radiometer-estimated vertically-integrated liquid water between two azimuthal directions: northeast (treatment) minus zenith (control).}
+\end{figure}
+
+
+\clearpage
+
+% =========================
+% 5 References
+% =========================
+
+
+
+
+
+
+% Define colors
+\definecolor{headerbg}{gray}{0.85}   % light grey for header
+\definecolor{tableborder}{gray}{0.6} % border color
+
+\begin{document}
+
+\section{References}
+\subsection{Data Sources}
+
+\renewcommand{\arraystretch}{1.3}      % row height
+\arrayrulecolor{tableborder}           % border color
+\setlength{\arrayrulewidth}{0.8pt}     % border thickness
+
+\begin{longtable}{|>{\centering\arraybackslash}p{3cm}|
+                  >{\centering\arraybackslash}p{4.5cm}|
+                  >{\RaggedRight\arraybackslash}p{5.5cm}|
+                  >{\centering\arraybackslash}p{2.5cm}|}
+\caption*{} % hide caption title
+\label{tab:data_sources}\\
+\hline
+\rowcolor{headerbg}
+\makecell[c]{\textbf{Type of} \\ \textbf{Data Source}} &
+\makecell[c]{\textbf{Specific} \\ \textbf{Locations}} &
+\makecell[c]{\textbf{Data} \\ \textbf{Description}} &
+\makecell[c]{\textbf{Granularity/} \\ \textbf{Frequency}} \\
+\hline
+\endfirsthead
+
+\hline
+\rowcolor{headerbg}
+\makecell[c]{\textbf{Type of} \\ \textbf{Data Source}} &
+\makecell[c]{\textbf{Specific} \\ \textbf{Locations}} &
+\makecell[c]{\textbf{Data} \\ \textbf{Description}} &
+\makecell[c]{\textbf{Granularity /} \\ \textbf{Frequency}} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+Radar &
+Grand Junction, CO &
+Radar reflectivity, velocity, precipitation accumulation, and all Level II and III fields at all elevation angles &
+$\sim$5 minutes \\
+\hline
+
+Radiometer &
+Moab, UT &
+Relative humidity, liquid water content in all scan directions &
+One minute \\
+\hline
+
+Weather Station &
+South Mesa, UT; Gold Basin, UT; Moab, UT; US-191 at MP 104 Flat Iron, UT; Hole N The Rock, UT; La Sal, UT; SR-46 at MP 12.5 La Sal Divide (UT DOT), UT &
+Weather variables such as precipitation, wind speed, wind direction, temperature, etc. &
+Hourly \\
+\hline
+
+SNOTEL &
+Castle Valley, UT; Gold Basin, UT; La Sal Mtn, UT; La Sal Mtn Lower, UT &
+Snow / water equivalent monitoring &
+Daily \\
+\hline
+
+\end{longtable}
+
+\end{document}
