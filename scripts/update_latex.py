@@ -75,7 +75,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     ops_pattern = r'\\includegraphics\[width=0\.85\\textwidth\]\{[^}]+\}'
     # Use lambda to return properly escaped string
     def ops_replacer(match):
-        return r'\includegraphics[width=0.85\textwidth]{' + plot_files["operations"] + '}'
+        return r'\includegraphics[width=0.85\textwidth]{plots/' + plot_files["operations"] + '}'
     content = re.sub(ops_pattern, ops_replacer, content, count=1)
     
     # Update caption for operations schedule
@@ -93,7 +93,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     if len(matches) >= 2:
         start, end = matches[1].span()
         # Use lambda to avoid regex escape interpretation
-        precip_replacement = r'\includegraphics[width=0.85\textwidth]{' + plot_files["precipitation"] + '}'
+        precip_replacement = r'\includegraphics[width=0.85\textwidth]{plots/' + plot_files["precipitation"] + '}'
         content = content[:start] + precip_replacement + content[end:]
     
     # Update precipitation caption
@@ -120,7 +120,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
                 
                 figure_code = (r'\begin{figure}[h!]' + '\n' +
                              r'  \centering' + '\n' +
-                             r'  \includegraphics[width=0.95\textwidth]{' + filename + '}' + '\n' +
+                             r'  \includegraphics[width=0.95\textwidth]{plots/' + filename + '}' + '\n' +
                              r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' +
                              month_name + r' snow depth at (top left) ' + treatment + 
                              r', and (top right) ' + control + 
