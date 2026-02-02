@@ -52,12 +52,13 @@ def update_latex_plots(month, year, main_tex_path=None):
     
     # Update operations schedule plot
     ops_pattern = r'\\includegraphics\[width=0\.85\\textwidth\]\{[^}]+\}'
-    ops_replacement = f'\\includegraphics[width=0.85\\textwidth]{{{plot_files["operations"]}}}'
+    ops_replacement = r'\includegraphics[width=0.85\textwidth]{' + plot_files["operations"] + '}'
     content = re.sub(ops_pattern, ops_replacement, content, count=1)
     
     # Update caption for operations schedule
     ops_caption_pattern = r'\\caption\{WETA operating schedule during [^}]+\}'
-    ops_caption_replacement = f'\\caption{{WETA operating schedule during {month_name} {year}. Green shading indicates periods of operation.}}'
+    ops_caption_replacement = (r'\caption{WETA operating schedule during ' + 
+                              f'{month_name} {year}. Green shading indicates periods of operation.}}')
     content = re.sub(ops_caption_pattern, ops_caption_replacement, content, count=1)
     
     # Update precipitation plot
@@ -66,11 +67,12 @@ def update_latex_plots(month, year, main_tex_path=None):
     matches = list(re.finditer(precip_pattern, content))
     if len(matches) >= 2:
         start, end = matches[1].span()
-        content = content[:start] + f'\\includegraphics[width=0.85\\textwidth]{{{plot_files["precipitation"]}}}' + content[end:]
+        precip_replacement = r'\includegraphics[width=0.85\textwidth]{' + plot_files["precipitation"] + '}'
+        content = content[:start] + precip_replacement + content[end:]
     
     # Update precipitation caption
     precip_caption_pattern = r'\\caption\{Summary of daily accumulated precipitation[^}]+\}'
-    precip_caption_replacement = f'\\caption{{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}}'
+    precip_caption_replacement = r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
     content = re.sub(precip_caption_pattern, precip_caption_replacement, content, count=1)
     
     # Update snow depth plot
@@ -78,11 +80,15 @@ def update_latex_plots(month, year, main_tex_path=None):
     snow_matches = list(re.finditer(snow_pattern, content))
     if snow_matches:
         start, end = snow_matches[0].span()
-        content = content[:start] + f'\\includegraphics[width=0.95\\textwidth]{{{plot_files["snowdepth"]}}}' + content[end:]
+        snow_replacement = r'\includegraphics[width=0.95\textwidth]{' + plot_files["snowdepth"] + '}'
+        content = content[:start] + snow_replacement + content[end:]
     
     # Update snow depth caption
     snow_caption_pattern = r'\\caption\{Box and whisker plots demonstrating SNOTEL-measured climatological [^}]+\}'
-    snow_caption_replacement = f'\\caption{{Box and whisker plots demonstrating SNOTEL-measured climatological {month_name} snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. The difference in monthly precipitation is shown in the bottom panel. The red circle in each panel indicates values for {month_name} {year}.}}'
+    snow_caption_replacement = (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
+                               f'{month_name} snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
+                               f'The difference in monthly precipitation is shown in the bottom panel. ' +
+                               f'The red circle in each panel indicates values for {month_name} {year}.}}')
     content = re.sub(snow_caption_pattern, snow_caption_replacement, content, count=1)
     
     # Update Executive Summary dates
