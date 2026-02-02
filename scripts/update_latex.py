@@ -91,14 +91,14 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     matches = list(re.finditer(precip_pattern, content))
     if len(matches) >= 2:
         start, end = matches[1].span()
-        # Replacement string - single backslashes
+        # Use lambda to avoid regex escape interpretation
         precip_replacement = r'\includegraphics[width=0.85\textwidth]{' + plot_files["precipitation"] + '}'
         content = content[:start] + precip_replacement + content[end:]
     
     # Update precipitation caption
     precip_caption_pattern = r'\\caption\{Summary of daily accumulated precipitation[^}]+\}'
-    # Replacement string - single backslashes
-    precip_caption_replacement = r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
+    # Use lambda to avoid regex escape interpretation
+    precip_caption_replacement = lambda m: r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
     content = re.sub(precip_caption_pattern, precip_caption_replacement, content, count=1)
     
     # Update snow depth plot
@@ -106,14 +106,14 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     snow_matches = list(re.finditer(snow_pattern, content))
     if snow_matches:
         start, end = snow_matches[0].span()
-        # Replacement string - single backslashes
+        # Use lambda to avoid regex escape interpretation
         snow_replacement = r'\includegraphics[width=0.95\textwidth]{' + plot_files["snowdepth"] + '}'
         content = content[:start] + snow_replacement + content[end:]
     
     # Update snow depth caption
     snow_caption_pattern = r'\\caption\{Box and whisker plots demonstrating SNOTEL-measured climatological [^}]+\}'
-    # Replacement string - single backslashes
-    snow_caption_replacement = (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
+    # Use lambda to avoid regex escape interpretation
+    snow_caption_replacement = lambda m: (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
                                month_name + r' snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
                                r'The difference in monthly precipitation is shown in the bottom panel. ' +
                                r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}}')
