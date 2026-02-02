@@ -201,12 +201,15 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
         month_dates = station_dates[mask]
         month_values = values[mask] if isinstance(values, pd.Series) else pd.Series(values)[mask]
         
+        # Convert from inches to millimeters (1 inch = 25.4 mm)
+        month_values_mm = month_values * 25.4
+        
         if len(month_dates) > 0:
-            ax.plot(month_dates, month_values, marker='o', label=station_name, 
+            ax.plot(month_dates, month_values_mm, marker='o', label=station_name, 
                    color=color, linewidth=2, markersize=4)
     
     ax.set_xlabel('Date')
-    ax.set_ylabel('Daily Precipitation (in)')
+    ax.set_ylabel('Daily Precipitation (mm)')
     ax.set_title(f'Daily Precipitation Summary - {calendar.month_name[month]} {year}')
     ax.legend(loc='best', ncol=2)
     ax.grid(True, alpha=0.3)
