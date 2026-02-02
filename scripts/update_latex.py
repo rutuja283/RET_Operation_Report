@@ -74,16 +74,18 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     
     # Update operations schedule plot
     ops_pattern = r'\\includegraphics\[width=0\.85\\textwidth\]\{[^}]+\}'
-    # Escape backslashes in replacement (re.sub interprets replacement as regex)
-    ops_replacement = r'\\includegraphics[width=0.85\\textwidth]{' + plot_files["operations"] + '}'
-    content = re.sub(ops_pattern, ops_replacement, content, count=1)
+    # Use lambda to return properly escaped string
+    def ops_replacer(match):
+        return r'\includegraphics[width=0.85\textwidth]{' + plot_files["operations"] + '}'
+    content = re.sub(ops_pattern, ops_replacer, content, count=1)
     
     # Update caption for operations schedule
     ops_caption_pattern = r'\\caption\{WETA operating schedule during [^}]+\}'
-    # Replacement string - single backslashes
-    ops_caption_replacement = (r'\caption{WETA operating schedule during ' + 
-                              month_name + ' ' + str(year) + r'. Green shading indicates periods of operation.}}')
-    content = re.sub(ops_caption_pattern, ops_caption_replacement, content, count=1)
+    # Use lambda to return properly escaped string
+    def ops_caption_replacer(match):
+        return (r'\caption{WETA operating schedule during ' + 
+                month_name + ' ' + str(year) + r'. Green shading indicates periods of operation.}}')
+    content = re.sub(ops_caption_pattern, ops_caption_replacer, content, count=1)
     
     # Update precipitation plot
     precip_pattern = r'\\includegraphics\[width=0\.85\\textwidth\]\{[^}]+\}'
@@ -97,9 +99,10 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     
     # Update precipitation caption
     precip_caption_pattern = r'\\caption\{Summary of daily accumulated precipitation[^}]+\}'
-    # Use lambda to avoid regex escape interpretation
-    precip_caption_replacement = lambda m: r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
-    content = re.sub(precip_caption_pattern, precip_caption_replacement, content, count=1)
+    # Use function to return properly escaped string
+    def precip_caption_replacer(match):
+        return r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
+    content = re.sub(precip_caption_pattern, precip_caption_replacer, content, count=1)
     
     # Update snow depth plot
     snow_pattern = r'\\includegraphics\[width=0\.95\\textwidth\]\{[^}]+\}'
@@ -112,12 +115,13 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     
     # Update snow depth caption
     snow_caption_pattern = r'\\caption\{Box and whisker plots demonstrating SNOTEL-measured climatological [^}]+\}'
-    # Use lambda to avoid regex escape interpretation
-    snow_caption_replacement = lambda m: (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
-                               month_name + r' snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
-                               r'The difference in monthly precipitation is shown in the bottom panel. ' +
-                               r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}}')
-    content = re.sub(snow_caption_pattern, snow_caption_replacement, content, count=1)
+    # Use function to return properly escaped string
+    def snow_caption_replacer(match):
+        return (r'\caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' + 
+                month_name + r' snow depth at (top left) La Sal Mountain, and (top right) Camp Jackson. ' +
+                r'The difference in monthly precipitation is shown in the bottom panel. ' +
+                r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}}')
+    content = re.sub(snow_caption_pattern, snow_caption_replacer, content, count=1)
     
     # Update Executive Summary dates
     date_pattern = r'This report covers \d+ days from \d+/\d+/\d+ to \d+/\d+/\d+\.'
