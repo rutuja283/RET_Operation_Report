@@ -406,7 +406,10 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         plt.subplots_adjust(bottom=0.18, top=0.92, hspace=0.45, wspace=0.25)
     
     if output_file is None:
-        output_file = PLOTS_DIR / f"{year}{month:02d}_SnowDepthSummary_Report.{PLOT_FORMAT}"
+        # Include station names in filename for multiple combinations
+        treatment_clean = treatment_station.replace(" ", "_").replace("/", "_")
+        control_clean = control_station.replace(" ", "_").replace("/", "_")
+        output_file = PLOTS_DIR / f"{year}{month:02d}_SnowDepth_{treatment_clean}_vs_{control_clean}.{PLOT_FORMAT}"
     
     plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches='tight')
     print(f"Saved: {output_file}")
