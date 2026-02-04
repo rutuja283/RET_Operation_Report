@@ -132,67 +132,87 @@ def parse_operations_data():
 def generate_operations_table_latex(df, month, year):
     """
     Generate LaTeX table in the format shown by user
+    Consolidates multiple entries for the same day
     """
-    # Group consecutive days with same status
-    table_rows = []
-    current_range = None
-    current_status = None
-    current_on_time = None
-    current_off_time = None
-    
+    # First, consolidate entries for the same day
+    daily_entries = {}
     for idx, row in df.iterrows():
         date = row['Date']
-        status = row['Operating']
-        on_time = row['On_Time']
-        off_time = row['Off_Time']
+        date_key = date.date()  # Use date as key
         
-        # Format date as "D-Mon"
-        date_str = date.strftime("%-d-%b")
+        if date_key not in daily_entries:
+            daily_entries[date_key] = {
+                'date': date,
+                'status_texts': [],
+                'is_on': False
+            }
         
-        # Use the original status text from the data
-        status_text = row['Status_Text']
+        # Add status text for this entry
+        daily_entries[date_key]['status_texts'].append(row['Status_Text'])
+        # If any entry shows operating, mark the day as operating
+        if row['Operating']:
+            daily_entries[date_key]['is_on'] = True
+    
+    # Convert to list and sort by date
+    consolidated_rows = []
+    for date_key in sorted(daily_entries.keys()):
+        entry = daily_entries[date_key]
+        # Combine multiple status texts for the same day with " / "
+        combined_status = " / ".join(entry['status_texts'])
+        consolidated_rows.append({
+            'date': entry['date'],
+            'status': combined_status,
+            'is_on': entry['is_on']
+        })
+    
+    # Now group consecutive days with same status text
+    table_rows = []
+    current_range_start = None
+    current_range_end = None
+    current_status_text = None
+    current_is_on = None
+    
+    for row in consolidated_rows:
+        date = row['date']
+        status_text = row['status']
+        is_on = row['is_on']
         
         # Check if we can merge with previous row
-        if (current_range is not None and 
-            current_status == status and
-            current_on_time == on_time and
-            current_off_time == off_time):
+        if (current_range_start is not None and 
+            current_status_text == status_text):
             # Extend range
-            current_range = (current_range[0], date)
+            current_range_end = date
         else:
             # Save previous range if exists
-            if current_range is not None:
-                start_date, end_date = current_range
-                if start_date == end_date:
-                    date_col = start_date.strftime("%-d-%b")
+            if current_range_start is not None:
+                if current_range_start == current_range_end:
+                    date_col = current_range_start.strftime("%-d-%b")
                 else:
-                    date_col = f"{start_date.strftime('%-d-%b')} to {end_date.strftime('%-d-%b')}"
+                    date_col = f"{current_range_start.strftime('%-d-%b')} to {current_range_end.strftime('%-d-%b')}"
                 
                 table_rows.append({
                     'date': date_col,
                     'status': current_status_text,
-                    'is_on': current_status
+                    'is_on': current_is_on
                 })
             
             # Start new range
-            current_range = (date, date)
-            current_status = status
+            current_range_start = date
+            current_range_end = date
             current_status_text = status_text
-            current_on_time = on_time
-            current_off_time = off_time
+            current_is_on = is_on
     
     # Add last range
-    if current_range is not None:
-        start_date, end_date = current_range
-        if start_date == end_date:
-            date_col = start_date.strftime("%-d-%b")
+    if current_range_start is not None:
+        if current_range_start == current_range_end:
+            date_col = current_range_start.strftime("%-d-%b")
         else:
-            date_col = f"{start_date.strftime('%-d-%b')} to {end_date.strftime('%-d-%b')}"
+            date_col = f"{current_range_start.strftime('%-d-%b')} to {current_range_end.strftime('%-d-%b')}"
         
         table_rows.append({
             'date': date_col,
             'status': current_status_text,
-            'is_on': current_status
+            'is_on': current_is_on
         })
     
     # Generate LaTeX
