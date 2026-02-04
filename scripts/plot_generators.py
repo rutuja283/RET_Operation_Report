@@ -394,27 +394,39 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         annotate_dot(ax2, highlight_idx, highlight_vals['c'])
         annotate_dot(ax3, highlight_idx, highlight_vals['d'])
     
-    # Set consistent y-limits
-    all_values = []
-    for groups in [treatment_groups, control_groups, diff_groups]:
-        for group in groups:
-            all_values.extend(group)
+    # Set dynamic y-limits for each panel based on their own data
+    # Treatment panel (ax1) - snow depth can't be negative, so start at 0
+    if treatment_groups and len(treatment_groups[0]) > 0:
+        t_values = treatment_groups[0]
+        if highlight_vals and highlight_vals['t'] is not None:
+            t_values = np.append(t_values, highlight_vals['t'])
+        t_min = max(0, np.nanmin(t_values))  # Ensure non-negative
+        t_max = np.nanmax(t_values)
+        t_range = t_max - t_min
+        t_padding = max(0.1 * t_range, 0.05 * t_max) if t_range > 0 else 0.05 * t_max if t_max > 0 else 1
+        ax1.set_ylim(max(0, t_min - t_padding), t_max + t_padding)
     
-    if highlight_vals:
-        all_values.extend([highlight_vals['t'], highlight_vals['c'], highlight_vals['d']])
+    # Control panel (ax2) - snow depth can't be negative, so start at 0
+    if control_groups and len(control_groups[0]) > 0:
+        c_values = control_groups[0]
+        if highlight_vals and highlight_vals['c'] is not None:
+            c_values = np.append(c_values, highlight_vals['c'])
+        c_min = max(0, np.nanmin(c_values))  # Ensure non-negative
+        c_max = np.nanmax(c_values)
+        c_range = c_max - c_min
+        c_padding = max(0.1 * c_range, 0.05 * c_max) if c_range > 0 else 0.05 * c_max if c_max > 0 else 1
+        ax2.set_ylim(max(0, c_min - c_padding), c_max + c_padding)
     
-    if all_values:
-        y_min = np.nanmin(all_values)
-        y_max = np.nanmax(all_values)
-        y_range = y_max - y_min
-        padding = max(0.1 * y_range, 0.05 * (abs(y_min) + abs(y_max)))
-        
-        y_min_final = max(0, y_min - padding) if y_min >= 0 else y_min - padding
-        y_max_final = y_max + padding
-        
-        ax1.set_ylim(y_min_final, y_max_final)
-        ax2.set_ylim(y_min_final, y_max_final)
-        ax3.set_ylim(y_min_final, y_max_final)
+    # Difference panel (ax3) - can be negative, so use full range
+    if diff_groups and len(diff_groups[0]) > 0:
+        d_values = diff_groups[0]
+        if highlight_vals and highlight_vals['d'] is not None:
+            d_values = np.append(d_values, highlight_vals['d'])
+        d_min = np.nanmin(d_values)
+        d_max = np.nanmax(d_values)
+        d_range = d_max - d_min
+        d_padding = max(0.1 * d_range, 0.05 * (abs(d_min) + abs(d_max))) if d_range > 0 else 0.05 * max(abs(d_min), abs(d_max)) if max(abs(d_min), abs(d_max)) > 0 else 1
+        ax3.set_ylim(d_min - d_padding, d_max + d_padding)
     
     try:
         plt.tight_layout()
