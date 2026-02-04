@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import re
 import sys
+import calendar
 
 sys.path.insert(0, str(Path(__file__).parent))
 from config import CSV_DIR, BASE_DIR
@@ -15,45 +16,56 @@ def parse_operations_data():
     Parse the operations data provided by user
     Returns DataFrame with Date, On_Time, Off_Time, Status columns
     """
-    # Raw data from user
+    # Raw data from user - January 2026
     data = [
-        ("1-Dec", "0134 off"),
-        ("2-Dec", "1158 on / 2356 off"),
-        ("3-Dec to 5-Dec", "off"),
-        ("6-Dec", "0254 on / 1740 off"),
-        ("7-Dec to 15-Dec", "off"),
-        ("16-Dec", "2135 on"),
-        ("17-Dec", "on"),
-        ("18-Dec", "1206 off"),
-        ("19-Dec", "off"),
-        ("20-Dec", "0208 on"),
-        ("21-Dec", "on"),
-        ("22-Dec", "0100 off"),
-        ("23-Dec", "1310 on / 1530 off"),
-        ("24-Dec to 25-Dec", "off"),
-        ("26-Dec", "1403 on"),
-        ("27-Dec", "on"),
-        ("28-Dec", "0508 off"),
-        ("29-Dec to 31-Dec", "off"),
+        ("01-Jan-2026", "2157 off"),
+        ("04-Jan-2026", "1939 on"),
+        ("05-Jan-2026", "1134 off"),
+        ("05-Jan-2026", "2354 on"),
+        ("06-Jan-2026", "1159 off"),
+        ("07-Jan-2026", "1605 on"),
+        ("09-Jan-2026", "1243 off"),
     ]
     
-    year = 2025
-    month = 12
+    year = 2026
+    month = 1
     
     rows = []
     
     for date_str, status_str in data:
-        # Parse date range
+        # Parse date - handle both "D-Mon" and "DD-Mon-YYYY" formats
         if " to " in date_str:
             # Date range
             start_str, end_str = date_str.split(" to ")
-            start_day = int(re.search(r'\d+', start_str).group())
-            end_day = int(re.search(r'\d+', end_str).group())
-            days = list(range(start_day, end_day + 1))
+            # Try to parse as full date first
+            try:
+                start_date = datetime.strptime(start_str.strip(), "%d-%b-%Y")
+                end_date = datetime.strptime(end_str.strip(), "%d-%b-%Y")
+                # Generate all dates in range
+                current = start_date
+                days = []
+                while current <= end_date:
+                    days.append(current.day)
+                    current += timedelta(days=1)
+            except:
+                # Fallback to old format
+                start_day = int(re.search(r'\d+', start_str).group())
+                end_day = int(re.search(r'\d+', end_str).group())
+                days = list(range(start_day, end_day + 1))
         else:
-            # Single date
-            day = int(re.search(r'\d+', date_str).group())
-            days = [day]
+            # Single date - try full format first
+            try:
+                date_obj = datetime.strptime(date_str.strip(), "%d-%b-%Y")
+                days = [date_obj.day]
+                # Update year and month from parsed date if needed
+                if date_obj.year != year:
+                    year = date_obj.year
+                if date_obj.month != month:
+                    month = date_obj.month
+            except:
+                # Fallback to old format
+                day = int(re.search(r'\d+', date_str).group())
+                days = [day]
         
         # Parse status
         on_time = None
@@ -227,8 +239,16 @@ if __name__ == "__main__":
     df_export.to_csv(csv_path, index=False)
     print(f"Saved operations CSV to {csv_path}")
     
+    # Determine month and year from data
+    if len(df) > 0:
+        data_month = df['Date'].dt.month.iloc[0]
+        data_year = df['Date'].dt.year.iloc[0]
+    else:
+        data_month = 1
+        data_year = 2026
+    
     # Generate LaTeX table
-    latex_table = generate_operations_table_latex(df, 12, 2025)
+    latex_table = generate_operations_table_latex(df, data_month, data_year)
     
     # Save LaTeX table to file
     latex_path = BASE_DIR / "operations_table.tex"
