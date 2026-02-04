@@ -1,5 +1,6 @@
 """
 Configuration file for RET Operations Report automation
+Last updated: February 2026
 """
 import os
 from pathlib import Path
