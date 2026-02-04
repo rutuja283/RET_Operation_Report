@@ -185,13 +185,22 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
         # Only dates explicitly in the operations table should be highlighted
         if not month_ops.empty and pd.api.types.is_datetime64_any_dtype(month_ops['Date']):
             # Get unique dates where Operating is True
-            operating_dates = month_ops[month_ops['Operating'] == True]['Date'].dt.date.unique()
-            
-            for date in dates:
-                # Only highlight if date is explicitly in the operations table and Operating is True
-                if date.date() in operating_dates:
-                    ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12),
-                              color='green', alpha=0.2, zorder=0)
+            # Filter out any NaN dates first
+            month_ops_clean = month_ops[month_ops['Date'].notna()].copy()
+            if not month_ops_clean.empty:
+                operating_dates = set(month_ops_clean[month_ops_clean['Operating'] == True]['Date'].dt.date.unique())
+                
+                print(f"   Highlighting {len(operating_dates)} dates: {sorted(operating_dates)}")
+                
+                for date in dates:
+                    # Only highlight if date is explicitly in the operations table and Operating is True
+                    if date.date() in operating_dates:
+                        ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12),
+                                  color='green', alpha=0.2, zorder=0)
+            else:
+                print("   Warning: No valid operating dates found in operations data")
+        else:
+            print("   Warning: Operations data is empty or Date column is not datetime")
     
     # Plot precipitation for each station
     colors = plt.cm.tab10(np.linspace(0, 1, len(stations_data)))
