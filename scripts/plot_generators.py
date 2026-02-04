@@ -170,23 +170,28 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     fig, ax = plt.subplots(figsize=(14, 6))
     
     # Plot operating periods as green background
+    # Only highlight dates that are explicitly in the operations table
+    dates = pd.date_range(start=month_start, end=month_end, freq='D')
+    
     if not operations_df.empty and 'Date' in operations_df.columns:
         # Ensure Date is datetime
         operations_df['Date'] = pd.to_datetime(operations_df['Date'], errors='coerce')
         month_ops = operations_df[
             (operations_df['Date'] >= month_start) & 
             (operations_df['Date'] <= month_end)
-        ]
-        dates = pd.date_range(start=month_start, end=month_end, freq='D')
+        ].copy()
         
-        for date in dates:
-            if not month_ops.empty and pd.api.types.is_datetime64_any_dtype(month_ops['Date']):
-                day_ops = month_ops[month_ops['Date'].dt.date == date.date()]
-                if not day_ops.empty and day_ops['Operating'].any():
+        # Get unique dates that have WETA operating
+        # Only dates explicitly in the operations table should be highlighted
+        if not month_ops.empty and pd.api.types.is_datetime64_any_dtype(month_ops['Date']):
+            # Get unique dates where Operating is True
+            operating_dates = month_ops[month_ops['Operating'] == True]['Date'].dt.date.unique()
+            
+            for date in dates:
+                # Only highlight if date is explicitly in the operations table and Operating is True
+                if date.date() in operating_dates:
                     ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12),
                               color='green', alpha=0.2, zorder=0)
-    else:
-        dates = pd.date_range(start=month_start, end=month_end, freq='D')
     
     # Plot precipitation for each station
     colors = plt.cm.tab10(np.linspace(0, 1, len(stations_data)))
