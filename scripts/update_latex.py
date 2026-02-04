@@ -103,31 +103,25 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         return r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
     content = re.sub(precip_caption_pattern, precip_caption_replacer, content, count=1)
     
-    # Replace all boxplot figures with all boxplot combinations
-    # Find all boxplot files for this month/year
-    boxplot_files = sorted(list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png")))
+    # Replace all boxplot figures with ONLY La Sal Mtn vs Camp jackson
+    # Find the specific boxplot file
+    target_boxplot = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+    boxplot_path = PLOTS_DIR / target_boxplot
     
-    if boxplot_files:
-        # Create LaTeX code for all boxplots
-        boxplot_figures = []
-        for boxplot_file in boxplot_files:
-            filename = boxplot_file.name
-            # Extract station names from filename
-            parts = filename.replace(f"{year}{month:02d}_SnowDepth_", "").replace(".png", "").split("_vs_")
-            if len(parts) == 2:
-                treatment = parts[0].replace("_", " ")
-                control = parts[1].replace("_", " ")
-                
-                figure_code = (r'\begin{figure}[h!]' + '\n' +
-                             r'  \centering' + '\n' +
-                             r'  \includegraphics[width=0.95\textwidth]{plots/' + filename + '}' + '\n' +
-                             r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' +
-                             month_name + r' snow depth at (top left) ' + treatment + 
-                             r', and (top right) ' + control + 
-                             r'. The difference in monthly snow depth is shown in the bottom panel. ' +
-                             r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}' + '\n' +
-                             r'\end{figure}' + '\n\n')
-                boxplot_figures.append(figure_code)
+    if boxplot_path.exists():
+        # Create LaTeX code for only this boxplot
+        treatment = "La Sal Mtn"
+        control = "Camp jackson"
+        
+        figure_code = (r'\begin{figure}[h!]' + '\n' +
+                     r'  \centering' + '\n' +
+                     r'  \includegraphics[width=0.95\textwidth]{plots/' + target_boxplot + '}' + '\n' +
+                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' +
+                     month_name + r' snow depth at (top left) ' + treatment + 
+                     r', and (top right) ' + control + 
+                     r'. The difference in monthly snow depth is shown in the bottom panel. ' +
+                     r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}' + '\n' +
+                     r'\end{figure}' + '\n\n')
         
         # Find the section from first SnowDepth figure to before Radiometer subsection
         # This pattern matches all consecutive SnowDepth figures
@@ -135,20 +129,20 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         
         matches = list(re.finditer(snow_section_pattern, content, re.DOTALL))
         if matches:
-            # Replace the entire boxplot section
+            # Replace the entire boxplot section with just one boxplot
             start, end = matches[0].span()
-            replacement = ''.join(boxplot_figures)
-            content = content[:start] + replacement + content[end:]
-            print(f"Replaced boxplot section with {len(boxplot_figures)} boxplot combinations")
+            content = content[:start] + figure_code + content[end:]
+            print(f"Replaced boxplot section with La Sal Mtn vs Camp jackson only")
         else:
             # Fallback: find just the first SnowDepth figure
             snow_figure_pattern = r'\\begin\{figure\}\[h!\]\s*\\centering\s*\\includegraphics\[width=0\.95\\textwidth\]\{[^}]*SnowDepth[^}]+\}\s*\\caption\{[^}]+\}\s*\\end\{figure\}'
             matches = list(re.finditer(snow_figure_pattern, content, re.DOTALL))
             if matches:
                 start, end = matches[0].span()
-                replacement = ''.join(boxplot_figures)
-                content = content[:start] + replacement + content[end:]
-                print(f"Replaced single boxplot with {len(boxplot_figures)} boxplot combinations")
+                content = content[:start] + figure_code + content[end:]
+                print(f"Replaced single boxplot with La Sal Mtn vs Camp jackson")
+    else:
+        print(f"Warning: Target boxplot not found: {target_boxplot}")
     
     # Update Executive Summary dates
     date_pattern = r'This report covers \d+ days from \d+/\d+/\d+ to \d+/\d+/\d+\.'
