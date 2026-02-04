@@ -149,8 +149,10 @@ def generate_operations_table_latex(df, month, year):
         
         # Add status text for this entry
         daily_entries[date_key]['status_texts'].append(row['Status_Text'])
-        # If any entry shows operating, mark the day as operating
-        if row['Operating']:
+        # Only mark as operating if status text explicitly contains "on"
+        # (not just "off" which means it was on earlier but turned off)
+        status_lower = row['Status_Text'].lower()
+        if "on" in status_lower:
             daily_entries[date_key]['is_on'] = True
     
     # Convert to list and sort by date
