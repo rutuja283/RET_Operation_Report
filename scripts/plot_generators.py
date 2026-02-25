@@ -330,12 +330,12 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     highlight_vals = None
     highlight_label = None
     
-    # Only process the target month
+    # Climatological boxplot: all years of the target month (e.g. all January values), with highlight_year highlighted
     t_data = treatment_df[treatment_df['month'] == target_month]['Value'].dropna().values
     c_data = control_df[control_df['month'] == target_month]['Value'].dropna().values
     
     if len(t_data) > 0 and len(c_data) > 0:
-        # Merge on date to calculate differences
+        # Merge on date to get differences for all years
         t_month = treatment_df[treatment_df['month'] == target_month].set_index('Date')['Value']
         c_month = control_df[control_df['month'] == target_month].set_index('Date')['Value']
         
@@ -349,15 +349,19 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
             diff_groups.append(merged['Diff'].values)
             labels.append(month_name)
             
-            # Set highlight for current month/year
+            # Highlight only the highlight year (e.g. January 2026) — mean of that month in that year
             if highlight_year:
-                highlight_idx = 1  # Only one box, so index is 1
-                highlight_vals = {
-                    't': float(merged['Treatment'].mean()),
-                    'c': float(merged['Control'].mean()),
-                    'd': float(merged['Diff'].mean())
-                }
-                highlight_label = None  # Remove label
+                highlight_idx = 1  # One box, index 1
+                merged_yr = merged[merged.index.year == highlight_year]
+                if len(merged_yr) > 0:
+                    highlight_vals = {
+                        't': float(merged_yr['Treatment'].mean()),
+                        'c': float(merged_yr['Control'].mean()),
+                        'd': float(merged_yr['Diff'].mean())
+                    }
+                else:
+                    highlight_vals = None
+                highlight_label = None
     
     if not labels:
         print("Warning: No overlapping data found")
@@ -371,33 +375,59 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     ax2 = fig.add_subplot(gs[0, 1])  # Control
     ax3 = fig.add_subplot(gs[1, :])  # Difference (spans both columns)
     
-    # Create boxplots (labels match February report: SWE / snow water content)
-    bp1 = ax1.boxplot(treatment_groups, labels=labels, showfliers=True)
-    ax1.set_title(f"{var_short}: {treatment_station} (TREATMENT)")
-    ax1.set_ylabel(var_label)
+    # Boxplot styling to match February report: blue fliers (climatological outliers), red dot = current year
+    def style_boxplot(bp, flier_color='#1f77b4'):
+        for box in bp['boxes']:
+            box.set_facecolor('white')
+            box.set_edgecolor('black')
+            box.set_linewidth(1)
+        for whisker in bp['whiskers']:
+            whisker.set_color('black')
+            whisker.set_linewidth(1)
+        for cap in bp['caps']:
+            cap.set_color('black')
+            cap.set_linewidth(1)
+        for median in bp['medians']:
+            median.set_color('black')
+            median.set_linewidth(1.5)
+        for flier in bp['fliers']:
+            flier.set_marker('o')
+            flier.set_markerfacecolor(flier_color)
+            flier.set_markeredgecolor(flier_color)
+            flier.set_markersize(4)
+            flier.set_alpha(0.8)
+
+    bp1 = ax1.boxplot(treatment_groups, labels=labels, showfliers=True, patch_artist=True)
+    style_boxplot(bp1)
+    ax1.set_title(f"{var_short}: {treatment_station} (TREATMENT)", fontsize=11)
+    ax1.set_ylabel(var_label, fontsize=10)
+    ax1.tick_params(axis="both", labelsize=9)
     ax1.tick_params(axis="x", rotation=45)
-    ax1.grid(axis="y", alpha=0.35)
-    
-    bp2 = ax2.boxplot(control_groups, labels=labels, showfliers=True)
-    ax2.set_title(f"{var_short}: {control_station} (CONTROL)")
+    ax1.grid(axis="y", alpha=0.35, linestyle='-')
+
+    bp2 = ax2.boxplot(control_groups, labels=labels, showfliers=True, patch_artist=True)
+    style_boxplot(bp2)
+    ax2.set_title(f"{var_short}: {control_station} (CONTROL)", fontsize=11)
+    ax2.tick_params(axis="both", labelsize=9)
     ax2.tick_params(axis="x", rotation=45)
-    ax2.grid(axis="y", alpha=0.35)
-    
-    bp3 = ax3.boxplot(diff_groups, labels=labels, showfliers=True)
-    ax3.set_title(f"{var_short}: TREATMENT - CONTROL")
-    ax3.set_ylabel("Difference (in)")
+    ax2.grid(axis="y", alpha=0.35, linestyle='-')
+
+    bp3 = ax3.boxplot(diff_groups, labels=labels, showfliers=True, patch_artist=True)
+    style_boxplot(bp3)
+    ax3.set_title(f"{var_short}: TREATMENT - CONTROL", fontsize=11)
+    ax3.set_ylabel("Difference (in)", fontsize=10)
+    ax3.tick_params(axis="both", labelsize=9)
     ax3.tick_params(axis="x", rotation=45)
-    ax3.grid(axis="y", alpha=0.35)
+    ax3.grid(axis="y", alpha=0.35, linestyle='-')
     ax3.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
-    
-    # Add highlight marker if specified (smaller dot, no label)
+
+    # Red circle = January of highlight year (current year); blue fliers already set above = climatological outliers
     if highlight_idx is not None and highlight_vals is not None:
         def annotate_dot(ax, x, y):
             if x is not None and y is not None and np.isfinite(y):
-                # Smaller dot: s=40 instead of 80, thinner edge
-                ax.scatter([x], [y], s=40, color="red", edgecolors="black", 
-                          linewidths=1, zorder=20, marker='o')
-        
+                ax.scatter([x], [y], s=50, color='red', edgecolors='black',
+                          linewidths=1.2, zorder=25, marker='o')
+
         annotate_dot(ax1, highlight_idx, highlight_vals['t'])
         annotate_dot(ax2, highlight_idx, highlight_vals['c'])
         annotate_dot(ax3, highlight_idx, highlight_vals['d'])
