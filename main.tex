@@ -247,7 +247,17 @@ Snow pack enhancement was evident in the target area. The nearby Abajo mountains
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.95\textwidth]{plots/202601_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{plots/202601_SnowDepth_La_Sal_Mtn_vs_Buckboard_Flat.png}
+    \caption{La Sal Mountain Upper vs.\ Buckboard Flat}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{plots/202601_SnowDepth_Lasal_Mtn_lower_vs_Camp_jackson.png}
+    \caption{La Sal Mountain Lower vs.\ Camp Jackson}
+  \end{subfigure}
   \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content at (top left) La Sal Mountain Upper, (top middle) Buckboard Flat, (bottom left) La Sal Mountain Lower, and (bottom middle) Camp Jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year. Blue circles indicate climatological outliers.}
   \label{fig:snow}
 \end{figure}
@@ -258,8 +268,12 @@ While Figure \ref{fig:snow} indicates that enhancement was likely, quantitative 
 
 \begin{figure}[h!]
   \centering
-  % TODO: Replace with actual enhancement plot (January 2026 enhancement by analog years: 2014, 2018, 2022, 2024, 2025)
-  \parbox{0.85\textwidth}{\centering\small [Insert Figure 4: January 2026 enhancement estimated by taking the difference between observations at La Sal and Abajo sites compared to the driest five recent years (2014, 2018, 2022, 2024, 2025).]}
+  % Save the enhancement plot as plots/202601_Enhancement_Jan2026.png to display (analog years: 2014, 2018, 2022, 2024, 2025).
+  \IfFileExists{plots/202601_Enhancement_Jan2026.png}{%
+    \includegraphics[width=0.9\textwidth]{plots/202601_Enhancement_Jan2026.png}%
+  }{%
+    \parbox{0.85\textwidth}{\centering\small [Insert Figure 4: January 2026 enhancement estimated by taking the difference between observations at La Sal and Abajo sites compared to the driest five recent years (2014, 2018, 2022, 2024, 2025).]}
+  }
   \caption{January 2026 enhancement estimated by taking the difference between observations at sites in La Sal and Abajo compared to the difference observed in the driest five recent years (2014, 2018, 2022, 2024, 2025).}
   \label{fig:enhancement}
 \end{figure}
