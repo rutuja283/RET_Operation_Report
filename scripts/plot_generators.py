@@ -245,11 +245,35 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     return output_file
 
 
+def _find_swe_or_snow_depth_column(df, prefer_swe=True):
+    """Return column name for SWE (snow water equivalent) or snow depth. Prefer SWE when prefer_swe=True."""
+    swe_col = None
+    depth_col = None
+    for col in df.columns:
+        c = str(col).lower()
+        if 'snow water equivalent' in c or ('water equivalent' in c and 'snow' in c) or (c.startswith('swe') or ' swe ' in c):
+            swe_col = col
+            break
+    for col in df.columns:
+        c = str(col).lower()
+        if 'snow' in c and 'depth' in c:
+            depth_col = col
+            break
+    if prefer_swe and swe_col is not None:
+        return swe_col, 'swe'
+    if depth_col is not None:
+        return depth_col, 'depth'
+    if swe_col is not None:
+        return swe_col, 'swe'
+    return None, None
+
+
 def plot_snow_depth_boxplots(treatment_station, control_station, month, year, 
-                             highlight_month=None, highlight_year=None, output_file=None):
+                             highlight_month=None, highlight_year=None, output_file=None, use_swe=True):
     """
-    Generate three-panel boxplot: Treatment, Control, and Difference
-    Shows only the specified month (not all months)
+    Generate three-panel boxplot: Treatment, Control, and Difference.
+    Uses Snow Water Equivalent (SWE) by default to match February report; set use_swe=False for snow depth.
+    Shows only the specified month (not all months).
     
     Args:
         treatment_station: Name of treatment station
@@ -259,16 +283,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         highlight_month: Month to highlight (defaults to month)
         highlight_year: Year to highlight (defaults to year)
         output_file: Output file path (if None, auto-generates with station names)
-    """
-    """
-    Generate three-panel boxplot: Treatment, Control, and Difference
-    
-    Args:
-        treatment_station: Name of treatment station
-        control_station: Name of control station
-        month: Month number for highlighting (1-12)
-        year: Year for highlighting
-        output_file: Output file path
+        use_swe: If True (default), plot Snow Water Equivalent; else Snow Depth
     """
     # Load data
     treatment_df, date_col_t = load_station_data(treatment_station)
@@ -278,23 +293,16 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         print(f"Warning: Could not load data for {treatment_station} or {control_station}")
         return None
     
-    # Find snow depth column (usually contains "snow" or "depth")
-    snow_col_t = None
-    snow_col_c = None
-    
-    for col in treatment_df.columns:
-        if 'snow' in str(col).lower() and 'depth' in str(col).lower():
-            snow_col_t = col
-            break
-    
-    for col in control_df.columns:
-        if 'snow' in str(col).lower() and 'depth' in str(col).lower():
-            snow_col_c = col
-            break
+    # Find SWE or snow depth column (prefer SWE to match February report)
+    snow_col_t, var_t = _find_swe_or_snow_depth_column(treatment_df, prefer_swe=use_swe)
+    snow_col_c, var_c = _find_swe_or_snow_depth_column(control_df, prefer_swe=use_swe)
     
     if snow_col_t is None or snow_col_c is None:
-        print(f"Warning: Could not find snow depth column")
+        print(f"Warning: Could not find SWE/snow depth column")
         return None
+    
+    var_label = "Snow Water Equivalent (in)" if (var_t == 'swe' or var_c == 'swe') else "Snow Depth (in)"
+    var_short = "SWE" if (var_t == 'swe' or var_c == 'swe') else "Snow Depth"
     
     # Prepare data
     treatment_df = treatment_df[[date_col_t, snow_col_t]].copy()
@@ -363,20 +371,20 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     ax2 = fig.add_subplot(gs[0, 1])  # Control
     ax3 = fig.add_subplot(gs[1, :])  # Difference (spans both columns)
     
-    # Create boxplots
+    # Create boxplots (labels match February report: SWE / snow water content)
     bp1 = ax1.boxplot(treatment_groups, labels=labels, showfliers=True)
-    ax1.set_title(f"Snow Depth: {treatment_station} (TREATMENT)")
-    ax1.set_ylabel("Snow Depth (in)")
+    ax1.set_title(f"{var_short}: {treatment_station} (TREATMENT)")
+    ax1.set_ylabel(var_label)
     ax1.tick_params(axis="x", rotation=45)
     ax1.grid(axis="y", alpha=0.35)
     
     bp2 = ax2.boxplot(control_groups, labels=labels, showfliers=True)
-    ax2.set_title(f"Snow Depth: {control_station} (CONTROL)")
+    ax2.set_title(f"{var_short}: {control_station} (CONTROL)")
     ax2.tick_params(axis="x", rotation=45)
     ax2.grid(axis="y", alpha=0.35)
     
     bp3 = ax3.boxplot(diff_groups, labels=labels, showfliers=True)
-    ax3.set_title(f"Snow Depth: TREATMENT - CONTROL")
+    ax3.set_title(f"{var_short}: TREATMENT - CONTROL")
     ax3.set_ylabel("Difference (in)")
     ax3.tick_params(axis="x", rotation=45)
     ax3.grid(axis="y", alpha=0.35)
@@ -435,10 +443,11 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         plt.subplots_adjust(bottom=0.18, top=0.92, hspace=0.45, wspace=0.25)
     
     if output_file is None:
-        # Include station names in filename for multiple combinations
+        # Include station names; use SWE in filename when plotting SWE to match February report
         treatment_clean = treatment_station.replace(" ", "_").replace("/", "_")
         control_clean = control_station.replace(" ", "_").replace("/", "_")
-        output_file = PLOTS_DIR / f"{year}{month:02d}_SnowDepth_{treatment_clean}_vs_{control_clean}.{PLOT_FORMAT}"
+        var_tag = "SWE" if (var_t == 'swe' or var_c == 'swe') else "SnowDepth"
+        output_file = PLOTS_DIR / f"{year}{month:02d}_{var_tag}_{treatment_clean}_vs_{control_clean}.{PLOT_FORMAT}"
     
     plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches='tight')
     print(f"Saved: {output_file}")

@@ -50,13 +50,18 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     else:
         # Prefer new station-specific files over old default name
         # Default to La Sal Mtn vs Camp jackson if available (matches report text)
-        preferred = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
-        if (PLOTS_DIR / preferred).exists():
-            plot_files['snowdepth'] = preferred
+        # Prefer SWE (snow water equivalent) plots to match February report
+        preferred_swe = f"{year}{month:02d}_SWE_La_Sal_Mtn_vs_Camp_jackson.png"
+        preferred_depth = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+        if (PLOTS_DIR / preferred_swe).exists():
+            plot_files['snowdepth'] = preferred_swe
+            print(f"Using preferred SWE plot: {plot_files['snowdepth']}")
+        elif (PLOTS_DIR / preferred_depth).exists():
+            plot_files['snowdepth'] = preferred_depth
             print(f"Using preferred snow depth plot: {plot_files['snowdepth']}")
         else:
-            # Find first available snow depth plot for this month/year
-            snow_plots = list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png"))
+            # Find first available SWE or snow depth plot for this month/year
+            snow_plots = list(PLOTS_DIR.glob(f"{year}{month:02d}_SWE_*.png")) or list(PLOTS_DIR.glob(f"{year}{month:02d}_SnowDepth_*.png"))
             if snow_plots:
                 plot_files['snowdepth'] = snow_plots[0].name
                 print(f"Using first available snow depth plot: {plot_files['snowdepth']}")
@@ -105,8 +110,11 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     
     # Replace all boxplot figures with ONLY La Sal Mtn vs Camp jackson
     # Find the specific boxplot file
-    target_boxplot = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+    target_boxplot = f"{year}{month:02d}_SWE_La_Sal_Mtn_vs_Camp_jackson.png"
     boxplot_path = PLOTS_DIR / target_boxplot
+    if not boxplot_path.exists():
+        target_boxplot = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+        boxplot_path = PLOTS_DIR / target_boxplot
     
     if boxplot_path.exists():
         # Create LaTeX code for only this boxplot
@@ -116,11 +124,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         figure_code = (r'\begin{figure}[h!]' + '\n' +
                      r'  \centering' + '\n' +
                      r'  \includegraphics[width=0.95\textwidth]{plots/' + target_boxplot + '}' + '\n' +
-                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological ' +
-                     month_name + r' snow depth at (top left) ' + treatment + 
-                     r', and (top right) ' + control + 
-                     r'. The difference in monthly snow depth is shown in the bottom panel. ' +
-                     r'The red circle in each panel indicates values for ' + month_name + ' ' + str(year) + r'.}' + '\n' +
+                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content (SWE) at (top left) La Sal Mountain Upper, (top middle) Buckboard Flat, (bottom left) La Sal Mountain Lower, and (bottom middle) Camp Jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year.}' + '\n' +
                      r'\end{figure}' + '\n\n')
         
         # Find the section from first SnowDepth figure to before Radiometer subsection
