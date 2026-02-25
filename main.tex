@@ -1,5 +1,5 @@
 % =========================================================
-% La Sal Ops Report (Jan 2026) - Concise RET branded template
+% La Sal Ops Report (Feb 2026) - Concise RET branded template
 % - Cover imported from PDF
 % - RET logo centered on every page except cover
 % - No chapters (uses section headings like Word)
@@ -131,7 +131,7 @@
 % =========================
 \section{Control Page}
 
-\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_JAN2026\_v01.pdf\\
+\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_Feb2026\_v01.pdf\\
 \textbf{Revision:}\hspace{0.98em}      1.0
 
 \vspace{7pt}
@@ -155,10 +155,10 @@
 \textbf{Ver \#} & \textbf{Comments} & \textbf{Author} & \textbf{Date} \\
 \hline
 0.0c & Original Document Development -- Draft &
-Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 01/13/2026 \\
+Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 02/12/2026 \\
 \hline
 1.0 & Released for External Review &
-Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 01/14/2026 \\
+Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 02/14/2026 \\
 \hline
 \end{tabular}
 \end{table}
@@ -174,35 +174,30 @@ Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 01/14/2026 \\
 This report provides a preliminary review of the Weather Enhancement Technology Array (WETA)
 installed by Rain Enhancement Technologies (RET) on the Flat Iron Mesa, outside Moab, Utah.
 WETA is a self-sufficient and ``off grid'' solution installed to provide enhancement of precipitation
-in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. the focus of this report is on the January 2026 operating period.
+in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. The focus of this report is on the January 2026 operating period.
 
 \subsection{Operational Summary}
 
 \begin{enumerate}
   \item This report covers 31 days from 01/01/2026 to 01/31/2026.
   \begin{enumerate}[label=\alph*.]
-    \item WETA operated on thirteen days in December 2025.
-    \item Precipitation was observed on twelve of those days.
-    \item Operations were suspended from 12/23 through 12/25 to avoid significant rainfall on snowpack at high altitude.
+    \item WETA operated on nine days in January 2026.
+    \item Precipitation was observed on seven of those days.
   \end{enumerate}
-  \item December 2025 was a climatologically dry month, despite the occurrence of precipitation on twelve days.
-  \item Relatively warm and dry conditions, coupled with the rain event on 12/23-12/25, resulted in a reduction of snowpack during the month. Some of this loss has already been recuperated in January.
-  \item Despite the month being relatively dry, the evidence presented in this report supports the likelihood that precipitation was enhanced by WETA over the La Sal range.
-  \item Radiometrics radiometer data is being processed. Preliminary analysis indicates orographic enhancement of vertically-integrated liquid water over the La Sal range.
-  \item Power issues related to the radiomenter elaborated in the previous report are ongoing.
-  \begin{enumerate}[label=\alph*.]
-    \item Changes implemented remotely to ``work around'' until full repair implemented.
-    \item Generator installation expected early February 2026.
-  \end{enumerate}
+  \item Like December 2025, January 2026 was a climatologically dry month.
+  \item Snow events on 1--2 January, 8--9 January, and 23--24 January replenished some of the snowpack that had degraded through December.
+  \item The evidence presented in this report supports the likelihood that precipitation was enhanced by WETA over the La Sal range.
+  \item Radiometrics radiometer data is being processed. Through consultation with Dr.\ Binod Pokharel, radiometer-derived quantities will be incorporated in forthcoming analyses as covariates.
+  \item Power issues related to the radiometer elaborated in the previous report were addressed in early February.
+  \item Addition of load shedding and backup generator for improved power reliability on site completed in early February.
 \end{enumerate}
 
 \subsection{Actions and Improvements}
 
 \begin{enumerate}
-  \item December precipitation and snow pack depth was evaluated against a historical baseline. 
-  \item Addition of load shedding and backup generator for improved power reliability on site (planned for Jan / Feb 2026).
+  \item January precipitation, snow pack depth, and snow-water equivalent were evaluated against observations (both current and historical) from the nearby Abajo Mountains. Expectations for untreated snowpack were deduced through analysis of snowpack in the La Sal Mountains compared to the Abajo in past years with similarly dry conditions.
   \item Installation of further instrumentation in La Sal Ranges (planned Mar/Apr 2026).
-  \item For each event, identification of treatment and control probabilities based on HySPLIT simulations (next reporting cycle).
+  \item Treatment probability maps are being calculated using HySPLIT simulations and estimated cell drift. A full event-based catalog of spatially-varying treatment probabilities will be presented in the next reporting cycle.
   \item WETA operations will continue to target predicted precipitation events that are not considered adverse weather conditions or impacting snow pack.
 \end{enumerate}
 
@@ -214,7 +209,7 @@ in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. th
 \section{Operations Summary}
 
 Table \ref{tab:operations_schedule} details the operating schedule during the reporting period. Green highlighting indicates periods when WETA was operational.
-WETA was operated during periods when forecasts indicated any chance of precipitation over the target area, including marginal cases involving scattered light showers. Operations were suspended from 23 to 25 December due to the likelihood of moderate rainfall over high-altitude snowpack.
+WETA was operated during periods when forecasts indicated any chance of precipitation over the target area, including marginal cases involving scattered light snow showers.
 
 \input{operations_table.tex}
 
@@ -227,45 +222,57 @@ WETA was operated during periods when forecasts indicated any chance of precipit
 
 \subsection{Summary of Precipitation Events}
 
-December 2025 was a relatively dry month. Figure 2 presents the daily time-series of precipitation measured at weather stations and SNOTEL in the region. Intermittent periods of light showers occurred during the first three weeks of December. WETA was operational during all but two of these marginal events. The most significant period of precipitation began on 24 December and terminated on 28th December. WETA was operational for all but the beginning of this event. The late start was due to concern about rain over snowpack. 
+January 2026 was another relatively dry month. Figure \ref{fig:precip} presents the daily time-series of precipitation measured at weather stations and SNOTEL in the region. Three main periods of snow occurred on 1--2 January, 8--9 January, and 23--24 January. WETA operated during these periods and had a likely impact on snowpack and snow water content.
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=1.05\textwidth]{plots/202601_PrecipSummary_Report_v02.png}
   \caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}
+  \label{fig:precip}
 \end{figure}
 
 
 
 \clearpage
 
-\subsection{Evaluation of Snow Pack Enhancement}
+\subsection{Evaluation of Snow Pack and Snow-Water Content Enhancement}
 
-Snow pack enhancement was evident in the target area. Climatological snow-depth baselines have been calculated at SNOTEL sites inside the target area as well as outside (but nearby). Figure 3 presents a comparison of two such sites: La Sal Mountain and Camp Jackson. The SNOTEL site at La Sal Mountain is at an elevation of 9580 ft and is inside the treatment area. Camp Jackson is located at 8840 ft in the Abajo Mountains to the south and outside of the treatment area. Both sites are at a similar altitude, receive similar annual snowfall, and are subject to a similar synoptic environment. The comparison presented in Figure 3 reveals the following:
-
+Snow pack enhancement was evident in the target area. The nearby Abajo mountains to the south of La Sal offer a means of establishing a control. We compared snow depth, snow-water equivalent, and accumulated precipitation at pairs of SNOTEL sites in the La Sal and Abajo ranges. Specifically, we compared observations from La Sal Upper to Buckboard Flat, and La Sal Lower to Camp Jackson. Figure \ref{fig:snow} presents snow-water equivalent content at these pairs of sites, respectively. The comparison presented in Figure \ref{fig:snow} reveals the following:
 
 \begin{enumerate}
-  \item In a typical year, snow pack depth in the La Sal range is similar to that in the Abajo mountains.
-  \item Both sites had a much shallower snowpack than average in December 2025 (see red circles in Fig.3).
-  \item Despite the dry conditions, La Sal maintained a deeper snowpack than Camp Jackson. The difference was above the climatological mean.
+  \item The climatology of snow water content at La Sal Upper is similar to that at Buckboard Flat. La Sal Lower maintains, on average, a shallower snowpack with less water content than Camp Jackson.
+  \item All sites had much less water in snowpack than average in December 2025 and January 2026 (see red circles in Fig.\,\ref{fig:snow}).
+  \item Despite the dry conditions, the La Sal sites maintained a deeper snowpack with more water content than the Abajo sites. The differences were above the climatological mean.
 \end{enumerate}
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.95\textwidth]{plots/202601_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png}
-  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological January snow depth at (top left) La Sal Mtn, and (top right) Camp jackson. The difference in monthly snow depth is shown in the bottom panel. The red circle in each panel indicates values for January 2026.}
+  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content at (top left) La Sal Mountain Upper, (top middle) Buckboard Flat, (bottom left) La Sal Mountain Lower, and (bottom middle) Camp Jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year. Blue circles indicate climatological outliers.}
+  \label{fig:snow}
 \end{figure}
 
+\subsection{Establishment of Controls: Comparison of January 2026 to Analog Years}
 
+While Figure \ref{fig:snow} indicates that enhancement was likely, quantitative estimation of the enhancement requires controls that are appropriate for the historically dry conditions that were observed in January 2026. We therefore evaluated the January 2026 observations against analogy years that were exceptionally dry. Using precipitation accumulation as a basis for selection, the five driest years since 2013 were 2014, 2018, 2022, 2024, and 2025. The differences between observations in the La Sal and Abajo ranges during these years were used to estimate ``expected differences''. Differences observed in 2026 that exceeded those expected differences are a measure of ``enhancement above expectation''. Figure \ref{fig:enhancement} summarizes the expected enhancement values for January 2026 using this methodology. At La Sal Upper, snow depth was likely enhanced by 3--4 inches and snow-water content was likely enhanced by approximately 2 inches at La Sal Upper. The comparison between La Sal Lower and Camp Jackson is subject to more variability, most likely due to the lower altitude and proximity to snowline.
+
+\begin{figure}[h!]
+  \centering
+  % TODO: Replace with actual enhancement plot (January 2026 enhancement by analog years: 2014, 2018, 2022, 2024, 2025)
+  \parbox{0.85\textwidth}{\centering\small [Insert Figure 4: January 2026 enhancement estimated by taking the difference between observations at La Sal and Abajo sites compared to the driest five recent years (2014, 2018, 2022, 2024, 2025).]}
+  \caption{January 2026 enhancement estimated by taking the difference between observations at sites in La Sal and Abajo compared to the difference observed in the driest five recent years (2014, 2018, 2022, 2024, 2025).}
+  \label{fig:enhancement}
+\end{figure}
 
 \subsection{Analysis of Radiometer Data}
 
-Radiometer-estimated liquid water content indicated a significant increase in cloud liquid water over La Sal during the active period at the end of December 2025. Fig. 12 presents the difference in vertically-integrated liquid water between two azimuthal directions -- one to the northeast directed towards the La Sal range, and one directed vertically. The higher values over the La Sal range were evident both before and after December 26th when WETA was suspended and operating, respectively. A longer record of analysis will indicate whether WETA operations amplify this apparent orographic effect.
+Radiometer-estimated liquid water content indicated significant differences in cloud liquid water over the La Sal range during the 23--24 January snow event. Fig.\,\ref{fig:radiometer} presents the difference in vertically-integrated liquid water between two azimuthal directions -- one to the northeast directed towards the La Sal range, and one directed vertically. Higher values over the La Sal range were evident during the snowfall period on the 23rd (e.g., see Fig.\,\ref{fig:precip}). RET has consulted with Dr.\ Binod Pokharel on best use of the radiometer data. Based on that discussion, derived radiometer quantities will be used as covariates to evaluate whether LWC or supercooled LWC may moderate the efficacy of enhancement.
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.55\textwidth]{Radiometer_VILWDiff_Dec2025.png}
   \caption{Low-pass filtered difference in radiometer-estimated vertically-integrated liquid water between two azimuthal directions: northeast (treatment) minus zenith (control).}
+  \label{fig:radiometer}
 \end{figure}
 
 
@@ -324,7 +331,7 @@ Hourly \\
 \hline
 
 SNOTEL &
-Castle Valley, UT; Gold Basin, UT; La Sal Mtn, UT; La Sal Mtn Lower, UT &
+Gold Basin, UT (1304); La Sal Mtn, UT (572); La Sal Mtn Lower, UT (1215); Buckboard Flat, UT (1153); Camp Jackson, UT (383) &
 Snow / water equivalent monitoring &
 Daily \\
 \hline
