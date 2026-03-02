@@ -317,55 +317,76 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     control_df['month'] = control_df['Date'].dt.month
     control_df['year'] = control_df['Date'].dt.year
     
-    # Only show the month of interest
+    # We want climatological December and January boxplots, with Dec of the
+    # previous year and Jan of the report year highlighted, similar to the
+    # February report figure.
     month_name = calendar.month_name[highlight_month] if highlight_month else calendar.month_name[month]
     target_month = highlight_month if highlight_month else month
     
-    treatment_groups = []
-    control_groups = []
-    diff_groups = []
-    labels = []
+    # Build groups for December (previous year) and January (report year)
+    months_to_plot = [12, target_month]
+    month_labels = [
+        f"Dec {str(year-1)[-2:]}",
+        f"{month_name[:3]} {str(year)[-2:]}"
+    ]
     
-    highlight_idx = None
-    highlight_vals = None
-    highlight_label = None
+    treatment_groups: list[np.ndarray] = []
+    control_groups: list[np.ndarray] = []
+    diff_groups: list[np.ndarray] = []
+    labels: list[str] = []
     
-    # Climatological boxplot: all years of the target month (e.g. all January values), with highlight_year highlighted
-    t_data = treatment_df[treatment_df['month'] == target_month]['Value'].dropna().values
-    c_data = control_df[control_df['month'] == target_month]['Value'].dropna().values
+    highlight_idxs: list[int] = []
+    highlight_t: list[float] = []
+    highlight_c: list[float] = []
+    highlight_d: list[float] = []
     
-    if len(t_data) > 0 and len(c_data) > 0:
-        # Merge on date to get differences for all years
-        t_month = treatment_df[treatment_df['month'] == target_month].set_index('Date')['Value']
-        c_month = control_df[control_df['month'] == target_month].set_index('Date')['Value']
+    for idx, (m, label) in enumerate(zip(months_to_plot, month_labels), start=1):
+        t_data = treatment_df[treatment_df['month'] == m]['Value'].dropna().values
+        c_data = control_df[control_df['month'] == m]['Value'].dropna().values
+        
+        if len(t_data) == 0 or len(c_data) == 0:
+            continue
+        
+        # Merge on date to get differences for all years for this month
+        t_month = treatment_df[treatment_df['month'] == m].set_index('Date')['Value']
+        c_month = control_df[control_df['month'] == m].set_index('Date')['Value']
         
         merged = pd.DataFrame({'Treatment': t_month, 'Control': c_month})
         merged = merged.dropna()
         merged['Diff'] = merged['Treatment'] - merged['Control']
         
-        if len(merged) > 0:
-            treatment_groups.append(t_data)
-            control_groups.append(c_data)
-            diff_groups.append(merged['Diff'].values)
-            labels.append(month_name)
-            
-            # Highlight only the highlight year (e.g. January 2026) — mean of that month in that year
-            if highlight_year:
-                highlight_idx = 1  # One box, index 1
-                merged_yr = merged[merged.index.year == highlight_year]
-                if len(merged_yr) > 0:
-                    highlight_vals = {
-                        't': float(merged_yr['Treatment'].mean()),
-                        'c': float(merged_yr['Control'].mean()),
-                        'd': float(merged_yr['Diff'].mean())
-                    }
-                else:
-                    highlight_vals = None
-                highlight_label = None
+        if len(merged) == 0:
+            continue
+        
+        treatment_groups.append(t_data)
+        control_groups.append(c_data)
+        diff_groups.append(merged['Diff'].values)
+        labels.append(label)
+        
+        # Highlight year: previous year for December, report year for January
+        if m == 12:
+            hy = year - 1
+        else:
+            hy = year
+        
+        merged_yr = merged[merged.index.year == hy]
+        if len(merged_yr) > 0:
+            highlight_idxs.append(idx)
+            highlight_t.append(float(merged_yr['Treatment'].mean()))
+            highlight_c.append(float(merged_yr['Control'].mean()))
+            highlight_d.append(float(merged_yr['Diff'].mean()))
     
     if not labels:
-        print("Warning: No overlapping data found")
+        print("Warning: No overlapping data found for December/January")
         return None
+    
+    highlight_vals = None
+    if highlight_idxs and highlight_t and highlight_c and highlight_d:
+        highlight_vals = {
+            't': highlight_t,
+            'c': highlight_c,
+            'd': highlight_d
+        }
     
     # Create three-panel plot
     fig = plt.figure(figsize=(12, 7))
@@ -421,22 +442,25 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     ax3.grid(axis="y", alpha=0.35, linestyle='-')
     ax3.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
 
-    # Red circle = January of highlight year (current year); blue fliers already set above = climatological outliers
-    if highlight_idx is not None and highlight_vals is not None:
-        def annotate_dot(ax, x, y):
-            if x is not None and y is not None and np.isfinite(y):
-                ax.scatter([x], [y], s=50, color='red', edgecolors='black',
-                          linewidths=1.2, zorder=25, marker='o')
+    # Red circles = December (previous year) and January (current year);
+    # blue fliers already set above = climatological outliers.
+    if highlight_vals is not None:
+        def annotate_dots(ax, xs, ys):
+            for x, y in zip(xs, ys):
+                if x is not None and y is not None and np.isfinite(y):
+                    ax.scatter([x], [y], s=50, color='red', edgecolors='black',
+                               linewidths=1.2, zorder=25, marker='o')
 
-        annotate_dot(ax1, highlight_idx, highlight_vals['t'])
-        annotate_dot(ax2, highlight_idx, highlight_vals['c'])
-        annotate_dot(ax3, highlight_idx, highlight_vals['d'])
+        annotate_dots(ax1, highlight_idxs, highlight_vals['t'])
+        annotate_dots(ax2, highlight_idxs, highlight_vals['c'])
+        annotate_dots(ax3, highlight_idxs, highlight_vals['d'])
     
     # Set dynamic y-limits for each panel based on their own data
-    # Treatment panel (ax1) - snow depth can't be negative, so start at 0
-    if treatment_groups and len(treatment_groups[0]) > 0:
-        t_values = treatment_groups[0]
-        if highlight_vals and highlight_vals['t'] is not None:
+    # Set dynamic y-limits for each panel based on all data points
+    # Treatment panel (ax1) - SWE/snow depth can't be negative, so start at 0
+    if treatment_groups:
+        t_values = np.concatenate(treatment_groups)
+        if highlight_vals is not None:
             t_values = np.append(t_values, highlight_vals['t'])
         t_min = max(0, np.nanmin(t_values))  # Ensure non-negative
         t_max = np.nanmax(t_values)
@@ -444,10 +468,10 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         t_padding = max(0.1 * t_range, 0.05 * t_max) if t_range > 0 else 0.05 * t_max if t_max > 0 else 1
         ax1.set_ylim(max(0, t_min - t_padding), t_max + t_padding)
     
-    # Control panel (ax2) - snow depth can't be negative, so start at 0
-    if control_groups and len(control_groups[0]) > 0:
-        c_values = control_groups[0]
-        if highlight_vals and highlight_vals['c'] is not None:
+    # Control panel (ax2) - SWE/snow depth can't be negative, so start at 0
+    if control_groups:
+        c_values = np.concatenate(control_groups)
+        if highlight_vals is not None:
             c_values = np.append(c_values, highlight_vals['c'])
         c_min = max(0, np.nanmin(c_values))  # Ensure non-negative
         c_max = np.nanmax(c_values)
@@ -456,9 +480,9 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         ax2.set_ylim(max(0, c_min - c_padding), c_max + c_padding)
     
     # Difference panel (ax3) - can be negative, so use full range
-    if diff_groups and len(diff_groups[0]) > 0:
-        d_values = diff_groups[0]
-        if highlight_vals and highlight_vals['d'] is not None:
+    if diff_groups:
+        d_values = np.concatenate(diff_groups)
+        if highlight_vals is not None:
             d_values = np.append(d_values, highlight_vals['d'])
         d_min = np.nanmin(d_values)
         d_max = np.nanmax(d_values)
