@@ -13,7 +13,7 @@ cd scripts
 python pdf_to_csv.py
 ```
 
-This will convert all PDF station files (La Sal Mtn, Camp Jackson, etc.) to CSV format in `data/csv/`.
+This will convert all PDF station files (La Sal Mtn Upper, Camp Jackson, etc.) to CSV format in `data/csv/`.
 
 ## Generate Report for a Month
 

@@ -421,7 +421,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 
     bp1 = ax1.boxplot(
         treatment_groups, labels=labels,
-        showfliers=True, patch_artist=True, widths=0.6
+        showfliers=True, patch_artist=True, widths=0.5
     )
     style_boxplot(bp1)
     ax1.set_title(f"{treatment_station}", fontsize=10, fontweight='bold')
@@ -431,7 +431,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 
     bp2 = ax2.boxplot(
         control_groups, labels=labels,
-        showfliers=True, patch_artist=True, widths=0.6
+        showfliers=True, patch_artist=True, widths=0.5
     )
     style_boxplot(bp2)
     ax2.set_title(f"{control_station}", fontsize=10, fontweight='bold')
@@ -440,7 +440,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 
     bp3 = ax3.boxplot(
         diff_groups, labels=labels,
-        showfliers=True, patch_artist=True, widths=0.6
+        showfliers=True, patch_artist=True, widths=0.5
     )
     style_boxplot(bp3)
     ax3.set_title(f"TREATMENT - CONTROL", fontsize=10, fontweight='bold')

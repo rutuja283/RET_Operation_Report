@@ -97,7 +97,7 @@ Update `main.tex` to reference these plots (or use the update script - see below
 ## Station Configuration
 
 Edit `scripts/config.py` to configure:
-- Treatment stations (La Sal Mtn, Lasal Mtn lower, Gold Basin)
+- Treatment stations (La Sal Mtn Upper, Lasal Mtn lower, Gold Basin)
 - Control stations (Camp jackson, Buckboard Flat, Elke Ridge)
 - Station name mappings (PDF filename -> standardized name)
 

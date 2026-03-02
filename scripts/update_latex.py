@@ -118,7 +118,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     
     if boxplot_path.exists():
         # Create LaTeX code for only this boxplot
-        treatment = "La Sal Mtn"
+        treatment = "La Sal Mtn Upper"
         control = "Camp jackson"
         
         figure_code = (r'\begin{figure}[h!]' + '\n' +
