@@ -388,13 +388,13 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
             'd': highlight_d
         }
     
-    # Create three-panel plot: [Treatment | Control | Difference] in one row,
-    # to match the layout in the February report screenshot.
+    # Create three-panel plot: [Treatment | Control | Difference] in one row.
+    # Slightly wider to better fill the horizontal space in the report.
     fig, (ax1, ax2, ax3) = plt.subplots(
-        1, 3, figsize=(8.0, 3.2), sharey=False
+        1, 3, figsize=(8.8, 3.0), sharey=False
     )
     
-    # Boxplot styling to match February report: blue boxes, neutral outliers,
+    # Boxplot styling: light blue boxes, hollow light-blue outliers,
     # red circles for highlighted years, no gridlines.
     def style_boxplot(bp):
         for box in bp['boxes']:
@@ -410,12 +410,18 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         for median in bp['medians']:
             median.set_color('#1f77b4')
             median.set_linewidth(1.5)
-        # Leave fliers (outliers) in default style so the boxes themselves
-        # read as the primary blue elements, matching the screenshot.
+        # Style fliers (outliers) as small hollow light-blue circles so that
+        # they are de‑emphasized relative to the boxes.
+        for flier in bp['fliers']:
+            flier.set_marker('o')
+            flier.set_markerfacecolor('none')
+            flier.set_markeredgecolor('#1f77b4')
+            flier.set_markersize(3)
+            flier.set_alpha(0.9)
 
     bp1 = ax1.boxplot(
         treatment_groups, labels=labels,
-        showfliers=True, patch_artist=True, widths=0.45
+        showfliers=True, patch_artist=True, widths=0.6
     )
     style_boxplot(bp1)
     ax1.set_title(f"{treatment_station}", fontsize=10, fontweight='bold')
@@ -425,7 +431,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 
     bp2 = ax2.boxplot(
         control_groups, labels=labels,
-        showfliers=True, patch_artist=True, widths=0.45
+        showfliers=True, patch_artist=True, widths=0.6
     )
     style_boxplot(bp2)
     ax2.set_title(f"{control_station}", fontsize=10, fontweight='bold')
@@ -434,7 +440,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 
     bp3 = ax3.boxplot(
         diff_groups, labels=labels,
-        showfliers=True, patch_artist=True, widths=0.45
+        showfliers=True, patch_artist=True, widths=0.6
     )
     style_boxplot(bp3)
     ax3.set_title(f"TREATMENT - CONTROL", fontsize=10, fontweight='bold')
@@ -449,8 +455,8 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         def annotate_dots(ax, xs, ys):
             for x, y in zip(xs, ys):
                 if x is not None and y is not None and np.isfinite(y):
-                    ax.scatter([x], [y], s=50, color='red', edgecolors='black',
-                               linewidths=1.2, zorder=25, marker='o')
+                    ax.scatter([x], [y], s=40, color='red', edgecolors='black',
+                               linewidths=1.1, zorder=25, marker='o')
 
         annotate_dots(ax1, highlight_idxs, highlight_vals['t'])
         annotate_dots(ax2, highlight_idxs, highlight_vals['c'])
