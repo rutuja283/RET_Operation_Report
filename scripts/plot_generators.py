@@ -388,15 +388,14 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
             'd': highlight_d
         }
     
-    # Create three-panel plot
-    fig = plt.figure(figsize=(12, 7))
-    gs = fig.add_gridspec(2, 2, height_ratios=[1, 1.2], hspace=0.45, wspace=0.25)
+    # Create three-panel plot: [Treatment | Control | Difference] in one row,
+    # to match the layout in the February report screenshot.
+    fig, (ax1, ax2, ax3) = plt.subplots(
+        1, 3, figsize=(8.0, 3.2), sharey=False
+    )
     
-    ax1 = fig.add_subplot(gs[0, 0])  # Treatment
-    ax2 = fig.add_subplot(gs[0, 1])  # Control
-    ax3 = fig.add_subplot(gs[1, :])  # Difference (spans both columns)
-    
-    # Boxplot styling to match February report: blue fliers (climatological outliers), red dot = current year
+    # Boxplot styling to match February report: light blue boxes, blue fliers
+    # (climatological outliers), red circles for highlighted years, no gridlines.
     def style_boxplot(bp, flier_color='#1f77b4'):
         for box in bp['boxes']:
             box.set_facecolor('white')
@@ -418,28 +417,34 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
             flier.set_markersize(4)
             flier.set_alpha(0.8)
 
-    bp1 = ax1.boxplot(treatment_groups, labels=labels, showfliers=True, patch_artist=True)
+    bp1 = ax1.boxplot(
+        treatment_groups, labels=labels,
+        showfliers=True, patch_artist=True
+    )
     style_boxplot(bp1)
-    ax1.set_title(f"{var_short}: {treatment_station} (TREATMENT)", fontsize=11)
-    ax1.set_ylabel(var_label, fontsize=10)
-    ax1.tick_params(axis="both", labelsize=9)
-    ax1.tick_params(axis="x", rotation=45)
-    ax1.grid(axis="y", alpha=0.35, linestyle='-')
+    ax1.set_title(f"{var_short}: {treatment_station} (TREATMENT)", fontsize=10)
+    ax1.set_ylabel(var_label, fontsize=9)
+    ax1.tick_params(axis="both", labelsize=8)
+    ax1.tick_params(axis="x", rotation=0)
 
-    bp2 = ax2.boxplot(control_groups, labels=labels, showfliers=True, patch_artist=True)
+    bp2 = ax2.boxplot(
+        control_groups, labels=labels,
+        showfliers=True, patch_artist=True
+    )
     style_boxplot(bp2)
-    ax2.set_title(f"{var_short}: {control_station} (CONTROL)", fontsize=11)
-    ax2.tick_params(axis="both", labelsize=9)
-    ax2.tick_params(axis="x", rotation=45)
-    ax2.grid(axis="y", alpha=0.35, linestyle='-')
+    ax2.set_title(f"{var_short}: {control_station} (CONTROL)", fontsize=10)
+    ax2.tick_params(axis="both", labelsize=8)
+    ax2.tick_params(axis="x", rotation=0)
 
-    bp3 = ax3.boxplot(diff_groups, labels=labels, showfliers=True, patch_artist=True)
+    bp3 = ax3.boxplot(
+        diff_groups, labels=labels,
+        showfliers=True, patch_artist=True
+    )
     style_boxplot(bp3)
-    ax3.set_title(f"{var_short}: TREATMENT - CONTROL", fontsize=11)
-    ax3.set_ylabel("Difference (in)", fontsize=10)
-    ax3.tick_params(axis="both", labelsize=9)
-    ax3.tick_params(axis="x", rotation=45)
-    ax3.grid(axis="y", alpha=0.35, linestyle='-')
+    ax3.set_title(f"{var_short}: TREATMENT - CONTROL", fontsize=10)
+    ax3.set_ylabel("Difference (in)", fontsize=9)
+    ax3.tick_params(axis="both", labelsize=8)
+    ax3.tick_params(axis="x", rotation=0)
     ax3.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
 
     # Red circles = December (previous year) and January (current year);
