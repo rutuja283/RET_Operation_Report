@@ -394,28 +394,24 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         1, 3, figsize=(8.0, 3.2), sharey=False
     )
     
-    # Boxplot styling to match February report: light blue boxes, blue fliers
-    # (climatological outliers), red circles for highlighted years, no gridlines.
-    def style_boxplot(bp, flier_color='#1f77b4'):
+    # Boxplot styling to match February report: blue boxes, neutral outliers,
+    # red circles for highlighted years, no gridlines.
+    def style_boxplot(bp):
         for box in bp['boxes']:
-            box.set_facecolor('white')
-            box.set_edgecolor('black')
-            box.set_linewidth(1)
+            box.set_facecolor('#c6dbef')  # light blue fill
+            box.set_edgecolor('#1f77b4')  # blue edge
+            box.set_linewidth(1.2)
         for whisker in bp['whiskers']:
-            whisker.set_color('black')
+            whisker.set_color('#1f77b4')
             whisker.set_linewidth(1)
         for cap in bp['caps']:
-            cap.set_color('black')
+            cap.set_color('#1f77b4')
             cap.set_linewidth(1)
         for median in bp['medians']:
-            median.set_color('black')
+            median.set_color('#1f77b4')
             median.set_linewidth(1.5)
-        for flier in bp['fliers']:
-            flier.set_marker('o')
-            flier.set_markerfacecolor(flier_color)
-            flier.set_markeredgecolor(flier_color)
-            flier.set_markersize(4)
-            flier.set_alpha(0.8)
+        # Leave fliers (outliers) in default style so the boxes themselves
+        # read as the primary blue elements, matching the screenshot.
 
     bp1 = ax1.boxplot(
         treatment_groups, labels=labels,
