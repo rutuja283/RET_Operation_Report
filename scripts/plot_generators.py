@@ -415,29 +415,29 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 
     bp1 = ax1.boxplot(
         treatment_groups, labels=labels,
-        showfliers=True, patch_artist=True
+        showfliers=True, patch_artist=True, widths=0.45
     )
     style_boxplot(bp1)
-    ax1.set_title(f"{var_short}: {treatment_station} (TREATMENT)", fontsize=10)
+    ax1.set_title(f"{treatment_station}", fontsize=10, fontweight='bold')
     ax1.set_ylabel(var_label, fontsize=9)
     ax1.tick_params(axis="both", labelsize=8)
     ax1.tick_params(axis="x", rotation=0)
 
     bp2 = ax2.boxplot(
         control_groups, labels=labels,
-        showfliers=True, patch_artist=True
+        showfliers=True, patch_artist=True, widths=0.45
     )
     style_boxplot(bp2)
-    ax2.set_title(f"{var_short}: {control_station} (CONTROL)", fontsize=10)
+    ax2.set_title(f"{control_station}", fontsize=10, fontweight='bold')
     ax2.tick_params(axis="both", labelsize=8)
     ax2.tick_params(axis="x", rotation=0)
 
     bp3 = ax3.boxplot(
         diff_groups, labels=labels,
-        showfliers=True, patch_artist=True
+        showfliers=True, patch_artist=True, widths=0.45
     )
     style_boxplot(bp3)
-    ax3.set_title(f"{var_short}: TREATMENT - CONTROL", fontsize=10)
+    ax3.set_title(f"TREATMENT - CONTROL", fontsize=10, fontweight='bold')
     ax3.set_ylabel("Difference (in)", fontsize=9)
     ax3.tick_params(axis="both", labelsize=8)
     ax3.tick_params(axis="x", rotation=0)
@@ -457,28 +457,24 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         annotate_dots(ax3, highlight_idxs, highlight_vals['d'])
     
     # Set dynamic y-limits for each panel based on their own data
-    # Set dynamic y-limits for each panel based on all data points
-    # Treatment panel (ax1) - SWE/snow depth can't be negative, so start at 0
-    if treatment_groups:
+    # Set dynamic y-limits for each panel based on all data points.
+    # Treatment & Control panels share the same y-scale (0 to a rounded max),
+    # similar to the screenshot, while the Difference panel can have its own.
+    if treatment_groups and control_groups:
         t_values = np.concatenate(treatment_groups)
-        if highlight_vals is not None:
-            t_values = np.append(t_values, highlight_vals['t'])
-        t_min = max(0, np.nanmin(t_values))  # Ensure non-negative
-        t_max = np.nanmax(t_values)
-        t_range = t_max - t_min
-        t_padding = max(0.1 * t_range, 0.05 * t_max) if t_range > 0 else 0.05 * t_max if t_max > 0 else 1
-        ax1.set_ylim(max(0, t_min - t_padding), t_max + t_padding)
-    
-    # Control panel (ax2) - SWE/snow depth can't be negative, so start at 0
-    if control_groups:
         c_values = np.concatenate(control_groups)
+        all_tc = np.concatenate([t_values, c_values])
         if highlight_vals is not None:
-            c_values = np.append(c_values, highlight_vals['c'])
-        c_min = max(0, np.nanmin(c_values))  # Ensure non-negative
-        c_max = np.nanmax(c_values)
-        c_range = c_max - c_min
-        c_padding = max(0.1 * c_range, 0.05 * c_max) if c_range > 0 else 0.05 * c_max if c_max > 0 else 1
-        ax2.set_ylim(max(0, c_min - c_padding), c_max + c_padding)
+            all_tc = np.append(all_tc, highlight_vals['t'])
+            all_tc = np.append(all_tc, highlight_vals['c'])
+        tc_max = float(np.nanmax(all_tc)) if all_tc.size else 0.0
+        # Round up to a clean number (nearest 5)
+        if tc_max <= 0:
+            y_max_tc = 1.0
+        else:
+            y_max_tc = 5 * np.ceil(tc_max / 5.0)
+        ax1.set_ylim(0, y_max_tc)
+        ax2.set_ylim(0, y_max_tc)
     
     # Difference panel (ax3) - can be negative, so use full range
     if diff_groups:
