@@ -2,13 +2,11 @@
 Update main.tex with new plot references for a given month/year
 """
 import re
-from pathlib import Path
-from datetime import datetime
-import calendar
-
+import subprocess
 import sys
 from pathlib import Path
-# Add parent directory to path for imports
+import calendar
+
 sys.path.insert(0, str(Path(__file__).parent))
 from config import BASE_DIR, PLOTS_DIR, TREATMENT_STATIONS, CONTROL_STATIONS
 
@@ -173,7 +171,32 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     month_abbr_upper = month_abbr.upper()
     doc_replacement = r'PI25003\_La\_Sal\_OpsReport\_' + month_abbr_upper + str(year) + r'\_v01.pdf'
     content = re.sub(doc_pattern, doc_replacement, content, count=1)
-    
+
+    # Generate enhancement table and update subsection placeholders
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).parent / "enhancement_table.py"),
+                "--month", str(month),
+                "--year", str(year),
+                "-o", str(BASE_DIR / "enhancement_table.tex"),
+            ],
+            cwd=str(BASE_DIR),
+            check=True,
+            capture_output=True,
+        )
+        analog_path = BASE_DIR / "enhancement_analog_years.txt"
+        if analog_path.exists():
+            analog_years_str = analog_path.read_text(encoding="utf-8").strip()
+            content = content.replace("ENHANCEMENT_ANALOG_YEARS", analog_years_str)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"Warning: Could not run enhancement_table.py: {e}")
+        content = content.replace("ENHANCEMENT_ANALOG_YEARS", "---")
+    report_month_year = f"{month_name} {year}"
+    content = content.replace("REPORT_MONTH_YEAR", report_month_year)
+    content = content.replace("REPORT_YEAR", str(year))
+
     # Write updated content
     with open(main_tex_path, 'w') as f:
         f.write(content)
