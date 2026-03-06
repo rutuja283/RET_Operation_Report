@@ -38,10 +38,16 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     month_name = calendar.month_name[month]
     month_abbr = calendar.month_abbr[month]
     
-    # Generate plot filenames
+    # Report month/year prefix for all plot filenames (YYYYMM)
+    plot_prefix = f"{year}{month:02d}"
+    
+    # Replace ALL plot paths that contain a YYYYMM pattern so latest figures are used
+    content = re.sub(r'plots/(\d{6})_', f'plots/{plot_prefix}_', content)
+    
+    # Generate plot filenames for the rest of the logic
     plot_files = {
-        'operations': f"{year}{month:02d}_OperatingSchedule_Report.png",
-        'precipitation': f"{year}{month:02d}_PrecipSummary_Report_v02.png",
+        'operations': f"{plot_prefix}_OperatingSchedule_Report.png",
+        'precipitation': f"{plot_prefix}_PrecipSummary_Report_v02.png",
     }
     
     # Handle snow depth plot - use specified one or find first available
