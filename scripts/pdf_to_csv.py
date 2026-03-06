@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from config import BASE_DIR, CSV_DIR, STATION_NAME_MAP
+from config import BASE_DIR, CSV_DIR, STATION_NAME_MAP, SNOTEL_STATIONS
 
 
 def clean_column_names(df):
@@ -231,6 +231,109 @@ def extract_with_pdfplumber(pdf_path):
         return None
 
 
+def extract_from_raw_csv_file(raw_csv_path):
+    """
+    Apply same pipeline logic as PDF extraction but to a raw CSV file:
+    skip metadata (# lines), find header (Date,...) and data start (YYYY-MM-DD), parse to DataFrame.
+    """
+    raw_csv_path = Path(raw_csv_path)
+    if not raw_csv_path.exists():
+        print(f"Raw CSV file not found: {raw_csv_path}")
+        return None
+    text = raw_csv_path.read_text(encoding="utf-8", errors="replace")
+    lines = text.split("\n")
+    csv_start_idx = None
+    header_start_idx = None
+    for i, line in enumerate(lines):
+        line_stripped = line.strip()
+        if not line_stripped or line_stripped.startswith("#"):
+            continue
+        if line_stripped.lower().startswith("date,") or line_stripped.lower().startswith("date\t"):
+            header_start_idx = i
+            break
+    if header_start_idx is not None:
+        for i in range(header_start_idx + 1, len(lines)):
+            line_stripped = lines[i].strip()
+            if not line_stripped or line_stripped.startswith("#"):
+                continue
+            if re.match(r"^\d{4}-\d{2}-\d{2}", line_stripped) and ("," in line_stripped or "\t" in line_stripped):
+                csv_start_idx = i
+                break
+    if csv_start_idx is None:
+        for i, line in enumerate(lines):
+            line_stripped = line.strip()
+            if not line_stripped or line_stripped.startswith("#"):
+                continue
+            if re.match(r"^\d{4}-\d{2}-\d{2}", line_stripped) and ("," in line_stripped or "\t" in line_stripped):
+                for j in range(i - 1, max(0, i - 10), -1):
+                    prev = lines[j].strip()
+                    if prev and not prev.startswith("#") and ("," in prev or "\t" in prev) and "date" in prev.lower():
+                        header_start_idx = j
+                        break
+                csv_start_idx = i
+                break
+    if csv_start_idx is None:
+        print("  Could not find CSV data start in raw file (no YYYY-MM-DD rows).")
+        return None
+    header = None
+    if header_start_idx is not None:
+        header_lines = []
+        for j in range(header_start_idx, csv_start_idx):
+            hline = lines[j].strip()
+            if hline and not hline.startswith("#"):
+                header_lines.append(" ".join(hline.split()))
+        if header_lines:
+            header = ""
+            for i, hline in enumerate(header_lines):
+                if i == 0:
+                    header = hline
+                else:
+                    header += hline if (header.endswith(",") or hline.startswith(",")) else " " + hline
+    csv_lines = [line for line in lines[csv_start_idx:] if line.strip() and not line.strip().startswith("#")]
+    csv_text = (header + "\n" + "\n".join(csv_lines)) if header else "\n".join(csv_lines)
+    for sep, sep_name in [(",", "comma"), ("\t", "tab")]:
+        try:
+            df = pd.read_csv(io.StringIO(csv_text), sep=sep, on_bad_lines="skip", engine="python", skipinitialspace=True)
+            if len(df) > 0 and len(df.columns) > 1:
+                df.columns = [str(c).strip().replace("\n", " ") for c in df.columns]
+                return df
+        except Exception:
+            pass
+    return None
+
+
+def convert_raw_csv_to_csv(raw_csv_path, output_dir=None, output_name=None):
+    """
+    Convert a raw Camp Jackson (or other station) CSV to cleaned CSV using pipeline logic:
+    extract from raw (skip metadata, find header/data), then clean_column_names, save.
+    """
+    raw_csv_path = Path(raw_csv_path)
+    if not raw_csv_path.exists():
+        print(f"Raw CSV file not found: {raw_csv_path}")
+        return None
+    if output_dir is None:
+        output_dir = CSV_DIR
+    else:
+        output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if output_name is None:
+        output_name = STATION_NAME_MAP.get(raw_csv_path.name, raw_csv_path.stem.replace(" raw", "").strip())
+        if not output_name or output_name == raw_csv_path.stem:
+            output_name = raw_csv_path.stem.replace(" raw", "").strip()
+    output_file = output_dir / f"{output_name}.csv"
+    print(f"Converting raw CSV {raw_csv_path.name} ...")
+    df = extract_from_raw_csv_file(raw_csv_path)
+    if df is None:
+        return None
+    df, _ = clean_column_names(df)
+    if df.empty:
+        print("  No rows left after cleaning.")
+        return None
+    df.to_csv(output_file, index=False)
+    print(f"Saved: {output_file}")
+    return output_file
+
+
 def convert_pdf_to_csv(pdf_path, output_dir=None):
     """
     Convert PDF to CSV, removing metadata and cleaning data
@@ -287,6 +390,12 @@ def convert_pdf_to_csv(pdf_path, output_dir=None):
         print(f"Warning: No data extracted from {pdf_name}")
         return None
     
+    # Do not overwrite CSVs for SNOTEL stations (pipeline fetches 2012 to end of report month from USDA)
+    snotel_names = {s["name"] for s in SNOTEL_STATIONS}
+    if station_name in snotel_names and output_file.exists():
+        print(f"Skipping (keeping USDA SNOTEL data): {output_file.name}")
+        return output_file
+    
     # Save to CSV
     df.to_csv(output_file, index=False)
     print(f"Saved: {output_file}")
@@ -327,9 +436,12 @@ def convert_all_pdfs(pdf_dir=None):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        # Convert specific file
-        pdf_path = Path(sys.argv[1])
-        convert_pdf_to_csv(pdf_path)
+        path = Path(sys.argv[1])
+        if path.suffix.lower() == ".csv":
+            # Raw CSV -> cleaned CSV (same pipeline logic: skip metadata, clean_column_names)
+            convert_raw_csv_to_csv(path)
+        else:
+            convert_pdf_to_csv(path)
     else:
         # Convert all PDFs
         convert_all_pdfs()

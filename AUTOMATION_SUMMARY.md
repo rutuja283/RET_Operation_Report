@@ -16,7 +16,7 @@ RET_Operation_Report/
 ### 2. Core Scripts
 
 #### `scripts/config.py`
-- Station mappings (treatment vs control; e.g., La Sal Mtn Upper vs control sites)
+- Station mappings (treatment vs control; e.g., La sal upper vs control sites)
 - Path configurations
 - Plot settings
 
@@ -88,7 +88,7 @@ This will:
 ## Station Configuration
 
 Treatment stations (from config.py):
-- La Sal Mtn Upper
+- La sal upper
 - Lasal Mtn lower
 - Gold Basin
 

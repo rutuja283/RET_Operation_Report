@@ -49,10 +49,10 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         plot_files['snowdepth'] = snowdepth_plot
     else:
         # Prefer new station-specific files over old default name
-        # Default to La Sal Mtn vs Camp jackson if available (matches report text)
+        # Default to La sal upper vs Camp jackson if available (matches report text)
         # Prefer SWE (snow water equivalent) plots to match February report
-        preferred_swe = f"{year}{month:02d}_SWE_La_Sal_Mtn_vs_Camp_jackson.png"
-        preferred_depth = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+        preferred_swe = f"{year}{month:02d}_SWE_La_sal_upper_vs_Camp_jackson.png"
+        preferred_depth = f"{year}{month:02d}_SnowDepth_La_sal_upper_vs_Camp_jackson.png"
         if (PLOTS_DIR / preferred_swe).exists():
             plot_files['snowdepth'] = preferred_swe
             print(f"Using preferred SWE plot: {plot_files['snowdepth']}")
@@ -108,23 +108,23 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         return r'\caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}'
     content = re.sub(precip_caption_pattern, precip_caption_replacer, content, count=1)
     
-    # Replace all boxplot figures with ONLY La Sal Mtn vs Camp jackson
-    # Find the specific boxplot file
-    target_boxplot = f"{year}{month:02d}_SWE_La_Sal_Mtn_vs_Camp_jackson.png"
+    # Replace all boxplot figures with ONLY La sal upper vs Camp jackson
+    # Find the specific boxplot file (plot names use underscores: La_sal_upper)
+    target_boxplot = f"{year}{month:02d}_SWE_La_sal_upper_vs_Camp_jackson.png"
     boxplot_path = PLOTS_DIR / target_boxplot
     if not boxplot_path.exists():
-        target_boxplot = f"{year}{month:02d}_SnowDepth_La_Sal_Mtn_vs_Camp_jackson.png"
+        target_boxplot = f"{year}{month:02d}_SnowDepth_La_sal_upper_vs_Camp_jackson.png"
         boxplot_path = PLOTS_DIR / target_boxplot
-    
+
     if boxplot_path.exists():
         # Create LaTeX code for only this boxplot
-        treatment = "La Sal Mtn Upper"
+        treatment = "La sal upper"
         control = "Camp jackson"
         
         figure_code = (r'\begin{figure}[h!]' + '\n' +
                      r'  \centering' + '\n' +
                      r'  \includegraphics[width=0.95\textwidth]{plots/' + target_boxplot + '}' + '\n' +
-                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content (SWE) at (top left) La Sal Mountain Upper, (top middle) Buckboard Flat, (bottom left) La Sal Mountain Lower, and (bottom middle) Camp Jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year.}' + '\n' +
+                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content (SWE) at (top left) La sal upper, (top middle) Buckboard Flat, (bottom left) La Sal Mountain Lower, and (bottom middle) Camp Jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year.}' + '\n' +
                      r'\end{figure}' + '\n\n')
         
         # Find the section from first SnowDepth figure to before Radiometer subsection
@@ -136,7 +136,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
             # Replace the entire boxplot section with just one boxplot
             start, end = matches[0].span()
             content = content[:start] + figure_code + content[end:]
-            print(f"Replaced boxplot section with La Sal Mtn vs Camp jackson only")
+            print(f"Replaced boxplot section with La sal upper vs Camp jackson only")
         else:
             # Fallback: find just the first SnowDepth figure
             snow_figure_pattern = r'\\begin\{figure\}\[h!\]\s*\\centering\s*\\includegraphics\[width=0\.95\\textwidth\]\{[^}]*SnowDepth[^}]+\}\s*\\caption\{[^}]+\}\s*\\end\{figure\}'
@@ -144,7 +144,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
             if matches:
                 start, end = matches[0].span()
                 content = content[:start] + figure_code + content[end:]
-                print(f"Replaced single boxplot with La Sal Mtn vs Camp jackson")
+                print(f"Replaced single boxplot with La sal upper vs Camp jackson")
     else:
         print(f"Warning: Target boxplot not found: {target_boxplot}")
     

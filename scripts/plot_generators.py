@@ -152,14 +152,9 @@ def plot_operations_schedule(operations_df, month, year, output_file=None):
 
 def plot_precipitation_summary(stations_data, operations_df, month, year, output_file=None):
     """
-    Generate precipitation summary plot with operating periods highlighted
-    
-    Args:
-        stations_data: Dict of {station_name: (dates, values)} tuples
-        operations_df: DataFrame with operating periods
-        month: Month number
-        year: Year
-        output_file: Output file path
+    Bar chart of daily precipitation (from Precipitation Accumulation) in inches,
+    with light green vertical bands for WETA operating periods. One bar per station per day.
+    Uses numeric x (0..n_days) so bars and WETA bands align; x-ticks show dates at readable spacing.
     """
     month_start = datetime(year, month, 1)
     if month == 12:
@@ -167,81 +162,71 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     else:
         month_end = datetime(year, month + 1, 1) - timedelta(days=1)
     
-    fig, ax = plt.subplots(figsize=(14, 6))
-    
-    # Plot operating periods as green background
-    # Only highlight dates that are explicitly in the operations table
     dates = pd.date_range(start=month_start, end=month_end, freq='D')
+    n_days = len(dates)
     
+    fig, ax = plt.subplots(figsize=(14, 6))
+    # Use numeric x so bars and axvspan share the same scale
+    ax.set_xlim(-0.5, n_days - 0.5)
+    
+    # Light green vertical bands for WETA operating periods (numeric x: day index)
     if not operations_df.empty and 'Date' in operations_df.columns:
-        # Ensure Date is datetime
-        operations_df['Date'] = pd.to_datetime(operations_df['Date'], errors='coerce')
-        month_ops = operations_df[
-            (operations_df['Date'] >= month_start) & 
-            (operations_df['Date'] <= month_end)
-        ].copy()
-        
-        # Get unique dates that have WETA operating
-        # Only dates explicitly in the operations table should be highlighted
-        if not month_ops.empty and pd.api.types.is_datetime64_any_dtype(month_ops['Date']):
-            # Get unique dates where Operating is True
-            # Filter out any NaN dates first
-            month_ops_clean = month_ops[month_ops['Date'].notna()].copy()
-            if not month_ops_clean.empty:
-                operating_dates = set(month_ops_clean[month_ops_clean['Operating'] == True]['Date'].dt.date.unique())
-                
-                print(f"   Highlighting {len(operating_dates)} dates: {sorted(operating_dates)}")
-                
-                for date in dates:
-                    # Only highlight if date is explicitly in the operations table and Operating is True
-                    if date.date() in operating_dates:
-                        ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12),
-                                  color='green', alpha=0.2, zorder=0)
-            else:
-                print("   Warning: No valid operating dates found in operations data")
-        else:
-            print("   Warning: Operations data is empty or Date column is not datetime")
+        ops = operations_df.copy()
+        ops['Date'] = pd.to_datetime(ops['Date'], errors='coerce').dt.normalize()
+        month_ops = ops[(ops['Date'] >= month_start) & (ops['Date'] <= month_end)]
+        if not month_ops.empty:
+            operating_dates = set(
+                month_ops.loc[month_ops['Operating'] == True, 'Date'].dt.date.unique()
+            )
+            print(f"   Highlighting {len(operating_dates)} WETA operating dates")
+            for j, d in enumerate(dates):
+                if d.date() in operating_dates:
+                    ax.axvspan(j - 0.5, j + 0.5, color='#90EE90', alpha=0.35, zorder=0)
     
-    # Plot precipitation for each station
-    colors = plt.cm.tab10(np.linspace(0, 1, len(stations_data)))
-    for (station_name, (station_dates, values)), color in zip(stations_data.items(), colors):
-        # Ensure dates is datetime Series
+    # Bar chart: one bar per station per day (x = day index 0..n_days-1)
+    n_stations = len(stations_data)
+    width = 0.8 / max(n_stations, 1)
+    colors = plt.cm.tab10(np.linspace(0, 1, n_stations))
+    day_axis = np.arange(n_days)
+    
+    for i, (station_name, (station_dates, values)) in enumerate(stations_data.items()):
         if not isinstance(station_dates, pd.Series):
             station_dates = pd.Series(station_dates)
-        station_dates = pd.to_datetime(station_dates, errors='coerce')
-        
-        # Filter to month
-        mask = (station_dates >= month_start) & (station_dates <= month_end)
-        month_dates = station_dates[mask]
-        month_values = values[mask] if isinstance(values, pd.Series) else pd.Series(values)[mask]
-        
-        # Convert from inches to millimeters (1 inch = 25.4 mm)
-        month_values_mm = month_values * 25.4
-        
-        if len(month_dates) > 0:
-            ax.plot(month_dates, month_values_mm, marker='o', label=station_name, 
-                   color=color, linewidth=2, markersize=4)
+        station_dates = pd.to_datetime(station_dates, errors='coerce').dt.normalize().dt.date
+        vals = np.asarray(values, dtype=float)
+        if len(vals) != len(station_dates):
+            vals = np.asarray(values, dtype=float)[: len(station_dates)]
+        by_date = pd.Series(vals, index=station_dates)
+        by_date = by_date[~by_date.index.duplicated(keep='first')]
+        precip_per_day = np.zeros(n_days)
+        for j, d in enumerate(dates):
+            d_date = d.date()
+            if d_date in by_date.index:
+                precip_per_day[j] = float(by_date.loc[d_date])
+        offset = (i - (n_stations - 1) / 2) * width
+        ax.bar(day_axis + offset, precip_per_day, width, label=station_name,
+               color=colors[i], edgecolor='gray', linewidth=0.3, zorder=1)
     
+    # Show x-ticks at readable interval (every 2–3 days) so labels don't overlap
+    tick_step = max(1, (n_days + 6) // 10)
+    tick_indices = list(range(0, n_days, tick_step))
+    if tick_indices[-1] != n_days - 1:
+        tick_indices.append(n_days - 1)
+    ax.set_xticks(tick_indices)
+    ax.set_xticklabels([f"{dates[j].day}-{dates[j].strftime('%b')}" for j in tick_indices], rotation=45, ha='right')
     ax.set_xlabel('Date')
-    ax.set_ylabel('Daily Precipitation (mm)')
-    ax.set_title(f'Daily Precipitation Summary - {calendar.month_name[month]} {year}')
-    ax.legend(loc='best', ncol=2)
-    ax.grid(True, alpha=0.3)
-    
-    # Format x-axis
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates)//10)))
-    plt.xticks(rotation=45)
-    
+    ax.set_ylabel('Precip (in)')
+    ax.set_title(f'{calendar.month_name[month]} Precipitation Summary')
+    ax.legend(loc='upper right', ncol=2, framealpha=0.9)
+    ax.set_ylim(0, None)
+    ax.grid(True, alpha=0.3, axis='y')
     plt.tight_layout()
     
     if output_file is None:
         output_file = PLOTS_DIR / f"{year}{month:02d}_PrecipSummary_Report_v02.{PLOT_FORMAT}"
-    
     plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches='tight')
     print(f"Saved: {output_file}")
     plt.close()
-    
     return output_file
 
 
@@ -317,17 +302,14 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     control_df['month'] = control_df['Date'].dt.month
     control_df['year'] = control_df['Date'].dt.year
     
-    # We want climatological December and January boxplots, with Dec of the
-    # previous year and Jan of the report year highlighted, similar to the
-    # February report figure.
+    # Water-year start through report month: Dec (prev year), Jan, ..., report month.
+    # Dec of previous year and Jan..report_month of report year highlighted.
     month_name = calendar.month_name[highlight_month] if highlight_month else calendar.month_name[month]
     target_month = highlight_month if highlight_month else month
     
-    # Build groups for December (previous year) and January (report year)
-    months_to_plot = [12, target_month]
-    month_labels = [
-        f"Dec {str(year-1)[-2:]}",
-        f"{month_name[:3]} {str(year)[-2:]}"
+    months_to_plot = [12] + list(range(1, target_month + 1))
+    month_labels = [f"Dec {str(year-1)[-2:]}"] + [
+        f"{calendar.month_abbr[m]} {str(year)[-2:]}" for m in range(1, target_month + 1)
     ]
     
     treatment_groups: list[np.ndarray] = []
@@ -377,7 +359,7 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
             highlight_d.append(float(merged_yr['Diff'].mean()))
     
     if not labels:
-        print("Warning: No overlapping data found for December/January")
+        print("Warning: No overlapping data found for boxplot months")
         return None
     
     highlight_vals = None

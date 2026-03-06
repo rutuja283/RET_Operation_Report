@@ -1,91 +1,65 @@
 """
-Parse operations table data and generate CSV and LaTeX table
+Parse operations table data and generate CSV and LaTeX table.
+Supports hardcoded data or file input (date, status per line or CSV).
 """
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta
 import re
 import sys
-import calendar
+import argparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 from config import CSV_DIR, BASE_DIR
 
-def parse_operations_data():
+
+def _parse_operations_rows(data, default_year, default_month):
     """
-    Parse the operations data provided by user
-    Returns DataFrame with Date, On_Time, Off_Time, Status columns
+    Build DataFrame from list of (date_str, status_str) using same logic as parse_operations_data.
+    default_year, default_month used when date string has no year (e.g. "5-Jan").
     """
-    # Raw data from user - January 2026
-    data = [
-        ("01-Jan-2026", "2157 off"),
-        ("04-Jan-2026", "1939 on"),
-        ("05-Jan-2026", "1134 off"),
-        ("05-Jan-2026", "2354 on"),
-        ("06-Jan-2026", "1159 off"),
-        ("07-Jan-2026", "1605 on"),
-        ("09-Jan-2026", "1243 off"),
-    ]
-    
-    year = 2026
-    month = 1
-    
+    year = default_year
+    month = default_month
     rows = []
-    
+
     for date_str, status_str in data:
-        # Parse date - handle both "D-Mon" and "DD-Mon-YYYY" formats
         if " to " in date_str:
-            # Date range
             start_str, end_str = date_str.split(" to ")
-            # Try to parse as full date first
             try:
                 start_date = datetime.strptime(start_str.strip(), "%d-%b-%Y")
                 end_date = datetime.strptime(end_str.strip(), "%d-%b-%Y")
-                # Generate all dates in range
                 current = start_date
                 days = []
                 while current <= end_date:
                     days.append(current.day)
                     current += timedelta(days=1)
-            except:
-                # Fallback to old format
+                year, month = start_date.year, start_date.month
+            except Exception:
                 start_day = int(re.search(r'\d+', start_str).group())
                 end_day = int(re.search(r'\d+', end_str).group())
                 days = list(range(start_day, end_day + 1))
         else:
-            # Single date - try full format first
             try:
                 date_obj = datetime.strptime(date_str.strip(), "%d-%b-%Y")
                 days = [date_obj.day]
-                # Update year and month from parsed date if needed
-                if date_obj.year != year:
-                    year = date_obj.year
-                if date_obj.month != month:
-                    month = date_obj.month
-            except:
-                # Fallback to old format
+                year, month = date_obj.year, date_obj.month
+            except Exception:
                 day = int(re.search(r'\d+', date_str).group())
                 days = [day]
-        
-        # Parse status
+
         on_time = None
         off_time = None
         is_on = False
-        status_display = status_str  # Keep original for display
-        
-        # Check if status contains "on" or "off"
+        status_display = status_str
         status_lower = status_str.lower()
-        
+
         if status_lower == "on":
-            # Just "on" - all day
             is_on = True
             status_display = "on"
         elif status_lower == "off":
-            # Just "off" - not operating
             is_on = False
             status_display = "off"
         elif " / " in status_str:
-            # Has both on and off times (e.g., "1158 on / 2356 off")
             parts = status_str.split(" / ")
             for part in parts:
                 time_match = re.search(r'(\d{4})', part)
@@ -98,22 +72,18 @@ def parse_operations_data():
                         off_time = time_val
             status_display = status_str
         else:
-            # Single time with on/off (e.g., "0134 off" means was on until 0134)
             time_match = re.search(r'(\d{4})', status_str)
             if time_match:
                 time_val = time_match.group(1)
                 if "off" in status_lower:
-                    # Was on until this time, then off
                     off_time = time_val
-                    is_on = True  # Was operating part of the day
+                    is_on = True
                     status_display = status_str
                 elif "on" in status_lower:
-                    # Turned on at this time
                     on_time = time_val
                     is_on = True
                     status_display = status_str
-        
-        # Create row for each day
+
         for day in days:
             date = datetime(year, month, day)
             rows.append({
@@ -123,11 +93,53 @@ def parse_operations_data():
                 'Operating': is_on,
                 'Status_Text': status_display
             })
-    
+
     df = pd.DataFrame(rows)
-    df = df.sort_values('Date')
-    
+    if len(df) > 0:
+        df = df.sort_values('Date')
     return df
+
+
+def parse_operations_from_file(path, month, year):
+    """
+    Read operations data from a file. Expects one record per line:
+    - CSV: date,status (e.g. "01-Jan-2026,2157 off")
+    - Or two columns separated by comma; date in DD-Mon-YYYY or DD-Mon format.
+    Returns DataFrame with Date, On_Time, Off_Time, Operating, Status_Text.
+    """
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Operations file not found: {path}")
+    data = []
+    with open(path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = [p.strip() for p in line.split(",", 1)]
+            if len(parts) >= 2:
+                data.append((parts[0], parts[1]))
+            elif len(parts) == 1 and "\t" in line:
+                parts = [p.strip() for p in line.split("\t", 1)]
+                if len(parts) >= 2:
+                    data.append((parts[0], parts[1]))
+    return _parse_operations_rows(data, year, month)
+
+
+def parse_operations_data():
+    """
+    Parse the operations data (hardcoded default). Returns DataFrame with Date, On_Time, Off_Time, Operating, Status_Text.
+    """
+    data = [
+        ("01-Jan-2026", "2157 off"),
+        ("04-Jan-2026", "1939 on"),
+        ("05-Jan-2026", "1134 off"),
+        ("05-Jan-2026", "2354 on"),
+        ("06-Jan-2026", "1159 off"),
+        ("07-Jan-2026", "1605 on"),
+        ("09-Jan-2026", "1243 off"),
+    ]
+    return _parse_operations_rows(data, default_year=2026, default_month=1)
 
 def generate_operations_table_latex(df, month, year):
     """
@@ -188,9 +200,9 @@ def generate_operations_table_latex(df, month, year):
             # Save previous range if exists
             if current_range_start is not None:
                 if current_range_start == current_range_end:
-                    date_col = current_range_start.strftime("%-d-%b")
+                    date_col = current_range_start.strftime("%m/%d/%Y")
                 else:
-                    date_col = f"{current_range_start.strftime('%-d-%b')} to {current_range_end.strftime('%-d-%b')}"
+                    date_col = f"{current_range_start.strftime('%m/%d/%Y')} -- {current_range_end.strftime('%m/%d/%Y')}"
                 
                 table_rows.append({
                     'date': date_col,
@@ -207,9 +219,9 @@ def generate_operations_table_latex(df, month, year):
     # Add last range
     if current_range_start is not None:
         if current_range_start == current_range_end:
-            date_col = current_range_start.strftime("%-d-%b")
+            date_col = current_range_start.strftime("%m/%d/%Y")
         else:
-            date_col = f"{current_range_start.strftime('%-d-%b')} to {current_range_end.strftime('%-d-%b')}"
+            date_col = f"{current_range_start.strftime('%m/%d/%Y')} -- {current_range_end.strftime('%m/%d/%Y')}"
         
         table_rows.append({
             'date': date_col,
@@ -221,11 +233,11 @@ def generate_operations_table_latex(df, month, year):
     latex_lines = []
     latex_lines.append("\\begin{longtable}{|p{5cm}|p{10cm}|}")
     latex_lines.append("\\hline")
-    latex_lines.append("\\textbf{DATE(S)} & \\textbf{WETA on/off} \\\\")
+    latex_lines.append("\\textbf{DATE(S)} & \\textbf{WETA (ON/OFF)} \\\\")
     latex_lines.append("\\hline")
     latex_lines.append("\\endfirsthead")
     latex_lines.append("\\hline")
-    latex_lines.append("\\textbf{DATE(S)} & \\textbf{WETA on/off} \\\\")
+    latex_lines.append("\\textbf{DATE(S)} & \\textbf{WETA (ON/OFF)} \\\\")
     latex_lines.append("\\hline")
     latex_lines.append("\\endhead")
     latex_lines.append("\\hline")
@@ -249,37 +261,42 @@ def generate_operations_table_latex(df, month, year):
     
     return "\n".join(latex_lines)
 
-if __name__ == "__main__":
-    # Parse data
-    df = parse_operations_data()
-    
-    # Save to CSV
+def _run(operations_input=None, month=None, year=None):
+    """Parse operations, write CSV and LaTeX. Uses file if operations_input given else hardcoded data."""
+    if operations_input and Path(operations_input).exists():
+        if month is None or year is None:
+            print("Error: --month and --year are required when using --input")
+            sys.exit(1)
+        df = parse_operations_from_file(operations_input, month, year)
+        data_month, data_year = month, year
+    else:
+        df = parse_operations_data()
+        if len(df) > 0:
+            data_month = int(df['Date'].dt.month.iloc[0])
+            data_year = int(df['Date'].dt.year.iloc[0])
+        else:
+            data_month, data_year = 1, 2026
+
     csv_path = CSV_DIR / "operations_schedule.csv"
-    # Convert to format expected by existing code
     df_export = df[['Date', 'Operating']].copy()
     df_export['Date'] = df_export['Date'].dt.strftime('%Y-%m-%d')
     df_export.to_csv(csv_path, index=False)
     print(f"Saved operations CSV to {csv_path}")
-    
-    # Determine month and year from data
-    if len(df) > 0:
-        data_month = df['Date'].dt.month.iloc[0]
-        data_year = df['Date'].dt.year.iloc[0]
-    else:
-        data_month = 1
-        data_year = 2026
-    
-    # Generate LaTeX table
+
     latex_table = generate_operations_table_latex(df, data_month, data_year)
-    
-    # Save LaTeX table to file
     latex_path = BASE_DIR / "operations_table.tex"
     with open(latex_path, 'w') as f:
         f.write(latex_table)
     print(f"Saved LaTeX table to {latex_path}")
-    
-    # Also print it
-    print("\n" + "="*60)
-    print("LaTeX Table:")
-    print("="*60)
-    print(latex_table)
+    return csv_path
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Parse operations table and generate CSV + LaTeX")
+    parser.add_argument("--input", "-i", help="Path to operations file (date,status per line or CSV)")
+    parser.add_argument("--month", "-m", type=int, help="Report month (1-12), required with --input")
+    parser.add_argument("--year", "-y", type=int, help="Report year, required with --input")
+    args = parser.parse_args()
+
+    _run(operations_input=args.input, month=args.month, year=args.year)
+    print("\nDone.")

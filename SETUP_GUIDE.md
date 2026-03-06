@@ -94,7 +94,7 @@ Edit `scripts/config.py` to customize:
 
 ```python
 TREATMENT_STATIONS = [
-    "La Sal Mtn",
+    "La sal upper",
     "Lasal Mtn lower", 
     "Gold Basin"
 ]
@@ -184,7 +184,7 @@ pip install tabula-py
 RET_Operation_Report/
 ├── data/
 │   ├── csv/              # Converted CSV files
-│   │   ├── La Sal Mtn.csv
+│   │   ├── La sal upper.csv
 │   │   ├── Camp jackson.csv
 │   │   └── operations_schedule.csv
 │   └── raw/              # Raw PDF files (optional)

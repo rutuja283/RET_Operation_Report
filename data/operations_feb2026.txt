@@ -1,0 +1,30 @@
+# February 2026 operations (from user: on/off times)
+# 2/11 1034 on; 2/14 0018 off; 2/18 1148 on; 2/23 0223 off
+01-Feb-2026,off
+02-Feb-2026,off
+03-Feb-2026,off
+04-Feb-2026,off
+05-Feb-2026,off
+06-Feb-2026,off
+07-Feb-2026,off
+08-Feb-2026,off
+09-Feb-2026,off
+10-Feb-2026,off
+11-Feb-2026,1034 on
+12-Feb-2026,on
+13-Feb-2026,on
+14-Feb-2026,0018 off
+15-Feb-2026,off
+16-Feb-2026,off
+17-Feb-2026,off
+18-Feb-2026,1148 on
+19-Feb-2026,on
+20-Feb-2026,on
+21-Feb-2026,on
+22-Feb-2026,on
+23-Feb-2026,0223 off
+24-Feb-2026,off
+25-Feb-2026,off
+26-Feb-2026,off
+27-Feb-2026,off
+28-Feb-2026,off

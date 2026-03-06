@@ -118,17 +118,23 @@ def generate_all_plots(month, year, operations_csv=None,
             if result is not None:
                 df, date_col = result
                 
-                # Find precipitation column
+                # Find precipitation column (prefer Precipitation Accumulation for SNOTEL)
                 precip_col = None
                 for col in df.columns:
                     col_lower = str(col).lower()
-                    if 'precip' in col_lower or 'prcp' in col_lower:
+                    if 'precipitation accumulation' in col_lower or ('precip' in col_lower and 'accum' in col_lower):
                         precip_col = col
                         break
+                if precip_col is None:
+                    for col in df.columns:
+                        col_lower = str(col).lower()
+                        if 'precip' in col_lower or 'prcp' in col_lower:
+                            precip_col = col
+                            break
                 
                 if precip_col:
-                    # Check if cumulative (SNOTEL)
-                    is_cumulative = 'snotel' in station_name.lower() or 'accum' in str(precip_col).lower()
+                    # SNOTEL uses cumulative precipitation; convert to daily
+                    is_cumulative = 'accum' in str(precip_col).lower() or 'snotel' in station_name.lower()
                     
                     if is_cumulative:
                         dates, values = handle_snotel_cumulative(df, date_col, precip_col)
