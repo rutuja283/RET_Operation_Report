@@ -5,7 +5,7 @@ For each metric (SWE, Snow Depth, Accum. Precip):
   - Avg_2026 = average of daily (Target - Control) over all days in February report year.
   - Expected = average of daily (Target - Control) over all February days in the 5 analog years (pooled).
   - Enhancement = Avg_2026 - Expected.
-Pairs: La sal upper - Buckboard Flat (LA SAL UPPER), Lasal Mtn lower - Camp jackson (LA SAL LOWER).
+Pairs: La sal upper - Buckboard Flat (La sal Upper), Lasal Mtn lower - Camp jackson (La sal Lower).
 """
 import calendar
 from pathlib import Path
@@ -70,12 +70,12 @@ def compute_enhancement_table(month=2, year=2026):
     Compute enhancement table for the given report month/year.
     Uses that month's precipitation to select 5 driest years since 2013.
     Returns (table_dict, analog_years, latex_str).
-    table_dict: rows 'LA SAL UPPER' and 'LA SAL LOWER', each with keys 'Snow Depth (in)', 'Snow-Water Eq (in)', 'Accum. Precip (in)'.
+    table_dict: rows 'La sal Upper' and 'La sal Lower', each with keys 'Snow Depth (in)', 'Snow-Water Eq (in)', 'Accum. Precip (in)'.
     """
     # Pairs: (target, control) -> row label
     pairs = [
-        ("La sal upper", "Buckboard Flat", "LA SAL UPPER"),
-        ("Lasal Mtn lower", "Camp jackson", "LA SAL LOWER"),
+        ("La sal upper", "Buckboard Flat", "La sal Upper"),
+        ("Lasal Mtn lower", "Camp jackson", "La sal Lower"),
     ]
     stations_needed = set()
     for t, c, _ in pairs:
@@ -186,7 +186,7 @@ def compute_enhancement_table(month=2, year=2026):
         "    & Snow Depth (in) & Snow-Water Eq (in) & Accum. Precip (in) \\\\",
         "    \\hline",
     ]
-    for row_label in ["LA SAL UPPER", "LA SAL LOWER"]:
+    for row_label in ["La sal Upper", "La sal Lower"]:
         row_vals = [
             fmt(table_dict[row_label]["Snow Depth (in)"]),
             fmt(table_dict[row_label]["Snow-Water Eq (in)"]),
@@ -215,7 +215,7 @@ def main():
     table_dict, analog_years, latex_str = compute_enhancement_table(month=args.month, year=args.year)
     print("Analog years (5 driest Februarys since 2013):", analog_years)
     print("Enhancement table:")
-    for row in ["LA SAL UPPER", "LA SAL LOWER"]:
+    for row in ["La sal Upper", "La sal Lower"]:
         print(f"  {row}:", table_dict[row])
     out_path = Path(args.output) if args.output else None
     if out_path is not None:

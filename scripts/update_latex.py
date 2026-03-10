@@ -128,7 +128,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
         figure_code = (r'\begin{figure}[h!]' + '\n' +
                      r'  \centering' + '\n' +
                      r'  \includegraphics[width=0.95\textwidth]{plots/' + target_boxplot + '}' + '\n' +
-                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content (SWE) at (top left) La sal upper, (top middle) Buckboard Flat, (bottom left) La Sal Mountain Lower, and (bottom middle) Camp Jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year.}' + '\n' +
+                     r'  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December and January snow water content (SWE) at (top left) La sal Upper, (top middle) Buckboard Flat, (bottom left) La sal Lower, and (bottom middle) Camp jackson. The differences are shown in the right-most column. The red circles in each panel indicate values for the current year.}' + '\n' +
                      r'\end{figure}' + '\n\n')
         
         # Find the section from first SnowDepth figure to before Radiometer subsection
