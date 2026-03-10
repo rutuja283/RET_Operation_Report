@@ -18,6 +18,16 @@ from config import (
     WATER_YEAR_START_MONTH, WATER_YEAR_START_DAY, PLOT_DPI, PLOT_FORMAT
 )
 
+# Display labels for boxplot panel titles (camel casing for report)
+STATION_DISPLAY_NAMES = {
+    "La sal upper": "La sal Upper",
+    "Lasal Mtn lower": "La sal Lower",
+    "Camp jackson": "Camp jackson",
+    "Buckboard Flat": "Buckboard Flat",
+    "Elke Ridge": "Elke Ridge",
+    "Gold Basin": "Gold Basin",
+}
+
 
 def get_water_year(date):
     """Get water year for a date (starts Oct 1)"""
@@ -406,7 +416,8 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         showfliers=True, patch_artist=True, widths=0.5
     )
     style_boxplot(bp1)
-    ax1.set_title(f"{treatment_station}", fontsize=10, fontweight='bold')
+    treatment_display = STATION_DISPLAY_NAMES.get(treatment_station, treatment_station)
+    ax1.set_title(f"{treatment_display}", fontsize=10, fontweight='bold')
     ax1.set_ylabel(var_label, fontsize=9)
     ax1.tick_params(axis="both", labelsize=8)
     ax1.tick_params(axis="x", rotation=0)
@@ -416,7 +427,8 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
         showfliers=True, patch_artist=True, widths=0.5
     )
     style_boxplot(bp2)
-    ax2.set_title(f"{control_station}", fontsize=10, fontweight='bold')
+    control_display = STATION_DISPLAY_NAMES.get(control_station, control_station)
+    ax2.set_title(f"{control_display}", fontsize=10, fontweight='bold')
     ax2.tick_params(axis="both", labelsize=8)
     ax2.tick_params(axis="x", rotation=0)
 
