@@ -22,7 +22,7 @@ from config import (
 STATION_DISPLAY_NAMES = {
     "La sal upper": "La sal Upper",
     "Lasal Mtn lower": "La sal Lower",
-    "Camp jackson": "Camp jackson",
+    "Camp jackson": "Camp Jackson",
     "Buckboard Flat": "Buckboard Flat",
     "Elke Ridge": "Elke Ridge",
     "Gold Basin": "Gold Basin",
