@@ -1,8 +1,10 @@
 """
 Generate the enhancement table (Figure 4 style) for the report.
-Uses February precipitation to select the 5 driest years since 2013,
-then computes (Target - Control) for Feb of those years and for Feb 2026;
-enhancement = (Feb 2026 difference) - mean(5 driest years' differences).
+Uses February precipitation to select the 5 driest years since 2013.
+For each metric (SWE, Snow Depth, Accum. Precip):
+  - Avg_2026 = average of daily (Target - Control) over all days in February report year.
+  - Expected = average of daily (Target - Control) over all February days in the 5 analog years (pooled).
+  - Enhancement = Avg_2026 - Expected.
 Pairs: La sal upper - Buckboard Flat (LA SAL UPPER), Lasal Mtn lower - Camp jackson (LA SAL LOWER).
 """
 import calendar
@@ -22,23 +24,8 @@ def _find_precip_accum_column(df):
     return None
 
 
-def _get_february_metrics(df, date_col, swe_col, snwd_col, prec_col, year):
-    """Return (swe, snwd, prec) on the last day of February for the given year. None if missing."""
-    feb_last = 29 if calendar.isleap(year) else 28
-    end_date = f"{year}-02-{feb_last:02d}"
-    row = df[df[date_col].dt.strftime("%Y-%m-%d") == end_date]
-    if row.empty:
-        return None, None, None
-    r = row.iloc[0]
-    return (
-        r[swe_col] if pd.notna(r[swe_col]) else None,
-        r[snwd_col] if pd.notna(r[snwd_col]) else None,
-        r[prec_col] if pd.notna(r[prec_col]) else None,
-    )
-
-
 def _february_precip_total(df, date_col, prec_col, year):
-    """Total precipitation in February = accum at end of Feb - accum at start of Feb (or Jan 31)."""
+    """Total precipitation in February = accum at end of Feb - accum at start of Feb. Used only for ranking years."""
     feb_last = 29 if calendar.isleap(year) else 28
     start_date = f"{year}-02-01"
     end_date = f"{year}-02-{feb_last:02d}"
@@ -51,6 +38,31 @@ def _february_precip_total(df, date_col, prec_col, year):
     if pd.isna(start_val) or pd.isna(end_val):
         return None
     return float(end_val - start_val)
+
+
+def _february_daily_diffs(target_df, target_date_col, target_col, control_df, control_date_col, control_col, year):
+    """
+    Return a list of daily (Target - Control) values for all days in February of the given year.
+    Only includes days where both target and control have valid (non-NaN) values.
+    """
+    feb_last = 29 if calendar.isleap(year) else 28
+    start_date = f"{year}-02-01"
+    end_date = f"{year}-02-{feb_last:02d}"
+
+    t = target_df[[target_date_col, target_col]].copy()
+    t.columns = ["date", "target"]
+    t["date"] = pd.to_datetime(t["date"])
+    t = t[(t["date"] >= start_date) & (t["date"] <= end_date)]
+
+    c = control_df[[control_date_col, control_col]].copy()
+    c.columns = ["date", "control"]
+    c["date"] = pd.to_datetime(c["date"])
+    c = c[(c["date"] >= start_date) & (c["date"] <= end_date)]
+
+    m = t.merge(c, on="date", how="inner")
+    m["diff"] = m["target"] - m["control"]
+    m = m[m["diff"].notna()]
+    return m["diff"].tolist()
 
 
 def compute_enhancement_table(month=2, year=2026):
@@ -115,66 +127,45 @@ def compute_enhancement_table(month=2, year=2026):
     sorted_years = sorted(feb_precip_by_year.keys(), key=lambda y: feb_precip_by_year[y])
     analog_years = sorted_years[:5]
 
-    # For each pair and each metric: differences for analog years and for report year.
-    # Snow Depth and SWE: end-of-month (Target - Control). Accum. Precip: precip that fell during the month (Target - Control).
+    # For each pair and each metric: average of daily (Target - Control) over all February days.
+    # Expected = mean of all those daily diffs pooled across the 5 analog years.
+    # Avg_2026 = mean of daily diffs in report-year February. Enhancement = Avg_2026 - Expected.
     all_years = analog_years + [year]
-    diffs_by_pair_metric = {}
-    for target, control, row_label in pairs:
-        diffs_by_pair_metric[row_label] = {
-            "Snow Depth (in)": [],
-            "Snow-Water Eq (in)": [],
-            "Accum. Precip (in)": [],
-        }
-        for y in all_years:
-            t_swe, t_snwd, t_prec = _get_february_metrics(
-                data[target]["df"],
-                data[target]["date_col"],
-                data[target]["swe_col"],
-                data[target]["snwd_col"],
-                data[target]["prec_col"],
-                y,
-            )
-            c_swe, c_snwd, c_prec = _get_february_metrics(
-                data[control]["df"],
-                data[control]["date_col"],
-                data[control]["swe_col"],
-                data[control]["snwd_col"],
-                data[control]["prec_col"],
-                y,
-            )
-            if t_snwd is not None and c_snwd is not None:
-                diffs_by_pair_metric[row_label]["Snow Depth (in)"].append((y, t_snwd - c_snwd))
-            if t_swe is not None and c_swe is not None:
-                diffs_by_pair_metric[row_label]["Snow-Water Eq (in)"].append((y, t_swe - c_swe))
-            # Accum. Precip: use total precip that fell in February (increment), not cumulative
-            t_feb_prec = _february_precip_total(
-                data[target]["df"], data[target]["date_col"], data[target]["prec_col"], y
-            )
-            c_feb_prec = _february_precip_total(
-                data[control]["df"], data[control]["date_col"], data[control]["prec_col"], y
-            )
-            if t_feb_prec is not None and c_feb_prec is not None:
-                diffs_by_pair_metric[row_label]["Accum. Precip (in)"].append(
-                    (y, t_feb_prec - c_feb_prec)
-                )
-
-    # Expected = mean of analog years; enhancement = current year diff - expected
     month_name = calendar.month_name[month]
     table_dict = {}
-    for row_label in ["LA SAL UPPER", "LA SAL LOWER"]:
+    for target, control, row_label in pairs:
         table_dict[row_label] = {}
-        for metric in ["Snow Depth (in)", "Snow-Water Eq (in)", "Accum. Precip (in)"]:
-            entries = diffs_by_pair_metric[row_label][metric]
-            analog_diffs = [v for (y, v) in entries if y in analog_years]
-            year_diffs = [v for (y, v) in entries if y == year]
-            if not analog_diffs:
+        for metric, target_col, control_col in [
+            ("Snow Depth (in)", data[target]["snwd_col"], data[control]["snwd_col"]),
+            ("Snow-Water Eq (in)", data[target]["swe_col"], data[control]["swe_col"]),
+            ("Accum. Precip (in)", data[target]["prec_col"], data[control]["prec_col"]),
+        ]:
+            # Pool all daily (Target - Control) in February for each year
+            daily_diffs_by_year = {}
+            for y in all_years:
+                daily_diffs = _february_daily_diffs(
+                    data[target]["df"],
+                    data[target]["date_col"],
+                    target_col,
+                    data[control]["df"],
+                    data[control]["date_col"],
+                    control_col,
+                    y,
+                )
+                daily_diffs_by_year[y] = daily_diffs
+
+            analog_pool = []
+            for y in analog_years:
+                analog_pool.extend(daily_diffs_by_year.get(y, []))
+            year_diffs = daily_diffs_by_year.get(year, [])
+
+            if not analog_pool:
                 table_dict[row_label][metric] = None
                 continue
-            expected = sum(analog_diffs) / len(analog_diffs)
-            current = year_diffs[0] if year_diffs else None
-            if current is not None:
-                enhancement = current - expected
-                table_dict[row_label][metric] = enhancement
+            expected = sum(analog_pool) / len(analog_pool)
+            avg_2026 = (sum(year_diffs) / len(year_diffs)) if year_diffs else None
+            if avg_2026 is not None:
+                table_dict[row_label][metric] = avg_2026 - expected
             else:
                 table_dict[row_label][metric] = None
 
