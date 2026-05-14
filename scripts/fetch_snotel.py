@@ -103,6 +103,8 @@ def fetch_snotel_for_report(month, year):
     """
     Fetch USDA SNOTEL data for all configured SNOTEL_STATIONS from SNOTEL_FETCH_START_YEAR
     through end of report month. Writes to data/csv/<name>.csv.
+    For example, month=4 and year=2026 fetches through 2026-04-30, so March and April 2026
+    are included in the daily series (along with all prior years from the start date).
     Returns list of (station_name, success, message).
     """
     start_date = f"{SNOTEL_FETCH_START_YEAR}-01-01"

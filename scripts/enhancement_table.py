@@ -1,10 +1,14 @@
 """
 Generate the enhancement table (Figure 4 style) for the report.
-Uses February precipitation to select the 5 driest years since 2013.
-For each metric (SWE, Snow Depth, Accum. Precip):
-  - Avg_2026 = average of daily (Target - Control) over all days in February report year.
-  - Expected = average of daily (Target - Control) over all February days in the 5 analog years (pooled).
-  - Enhancement = Avg_2026 - Expected.
+Uses the report month's precipitation at **target stations only** (La sal upper, Lasal Mtn lower) averaged together to select the 5 driest years since 2013.
+
+Enhancement follows MATLAB-style differencing (one value per site per year, not pooled daily diffs):
+  - Snow depth & SWE: value on the **last calendar day** of the report month for target and control.
+  - Accum. precip: **month total** = accumulation on last day minus accumulation on the 1st (same as dry-year ranking).
+  - expecteddiff = mean(target over 5 analog years) - mean(control over 5 analog years)
+    (equivalently mean of yearly (target - control) for those years).
+  - actualdiff = target(report year) - control(report year)
+  - Enhancement = actualdiff - expecteddiff
 Pairs: La sal upper - Buckboard Flat (La sal Upper), Lasal Mtn lower - Camp jackson (La sal Lower).
 """
 import calendar
@@ -12,7 +16,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import CSV_DIR
 from plot_generators import load_station_data, _find_swe_or_snow_depth_column
 
 
@@ -24,11 +27,11 @@ def _find_precip_accum_column(df):
     return None
 
 
-def _february_precip_total(df, date_col, prec_col, year):
-    """Total precipitation in February = accum at end of Feb - accum at start of Feb. Used only for ranking years."""
-    feb_last = 29 if calendar.isleap(year) else 28
-    start_date = f"{year}-02-01"
-    end_date = f"{year}-02-{feb_last:02d}"
+def _month_precip_total(df, date_col, prec_col, year, month):
+    """Total precipitation in calendar month = accum at end of month - accum at start of month. Used for ranking years."""
+    last_day = calendar.monthrange(year, month)[1]
+    start_date = f"{year}-{month:02d}-01"
+    end_date = f"{year}-{month:02d}-{last_day:02d}"
     start_row = df[df[date_col].dt.strftime("%Y-%m-%d") == start_date]
     end_row = df[df[date_col].dt.strftime("%Y-%m-%d") == end_date]
     if start_row.empty or end_row.empty:
@@ -40,35 +43,49 @@ def _february_precip_total(df, date_col, prec_col, year):
     return float(end_val - start_val)
 
 
-def _february_daily_diffs(target_df, target_date_col, target_col, control_df, control_date_col, control_col, year):
+def _month_end_value(df, date_col, value_col, year, month):
+    """Scalar on last calendar day of month (SWE or snow depth start-of-day row for that date)."""
+    last_day = calendar.monthrange(year, month)[1]
+    end_date = f"{year}-{month:02d}-{last_day:02d}"
+    end_row = df[df[date_col].dt.strftime("%Y-%m-%d") == end_date]
+    if end_row.empty:
+        return None
+    v = end_row.iloc[0][value_col]
+    if pd.isna(v):
+        return None
+    return float(v)
+
+
+def _matlab_style_metric(
+    target_df,
+    target_date_col,
+    target_col,
+    control_df,
+    control_date_col,
+    control_col,
+    year,
+    month,
+    *,
+    use_month_precip_total,
+):
     """
-    Return a list of daily (Target - Control) values for all days in February of the given year.
-    Only includes days where both target and control have valid (non-NaN) values.
+    Return (target_value, control_value) for one calendar year/month.
+    If use_month_precip_total, uses _month_precip_total for both; else month-end snapshot.
     """
-    feb_last = 29 if calendar.isleap(year) else 28
-    start_date = f"{year}-02-01"
-    end_date = f"{year}-02-{feb_last:02d}"
-
-    t = target_df[[target_date_col, target_col]].copy()
-    t.columns = ["date", "target"]
-    t["date"] = pd.to_datetime(t["date"])
-    t = t[(t["date"] >= start_date) & (t["date"] <= end_date)]
-
-    c = control_df[[control_date_col, control_col]].copy()
-    c.columns = ["date", "control"]
-    c["date"] = pd.to_datetime(c["date"])
-    c = c[(c["date"] >= start_date) & (c["date"] <= end_date)]
-
-    m = t.merge(c, on="date", how="inner")
-    m["diff"] = m["target"] - m["control"]
-    m = m[m["diff"].notna()]
-    return m["diff"].tolist()
+    if use_month_precip_total:
+        t = _month_precip_total(target_df, target_date_col, target_col, year, month)
+        c = _month_precip_total(control_df, control_date_col, control_col, year, month)
+    else:
+        t = _month_end_value(target_df, target_date_col, target_col, year, month)
+        c = _month_end_value(control_df, control_date_col, control_col, year, month)
+    return t, c
 
 
 def compute_enhancement_table(month=2, year=2026):
     """
     Compute enhancement table for the given report month/year.
-    Uses that month's precipitation to select 5 driest years since 2013.
+    Uses that month's precipitation at target sites only to select 5 driest years since 2013.
+    Enhancement uses MATLAB-style month-end (or month precip total) values per year, not pooled daily diffs.
     Returns (table_dict, analog_years, latex_str).
     table_dict: rows 'La sal Upper' and 'La sal Lower', each with keys 'Snow Depth (in)', 'Snow-Water Eq (in)', 'Accum. Precip (in)'.
     """
@@ -77,6 +94,7 @@ def compute_enhancement_table(month=2, year=2026):
         ("La sal upper", "Buckboard Flat", "La sal Upper"),
         ("Lasal Mtn lower", "Camp jackson", "La sal Lower"),
     ]
+    target_stations_for_ranking = {t for t, _, _ in pairs}
     stations_needed = set()
     for t, c, _ in pairs:
         stations_needed.add(t)
@@ -106,44 +124,45 @@ def compute_enhancement_table(month=2, year=2026):
             "prec_col": prec_col,
         }
 
-    # Rank years by February precipitation (average across the four stations)
+    # Rank years by report-month precipitation (average across target stations only)
     years_to_rank = [y for y in range(2013, year) if y != year]
-    feb_precip_by_year = {}
+    month_precip_by_year = {}
     for y in years_to_rank:
         vals = []
-        for name in stations_needed:
-            v = _february_precip_total(
+        for name in target_stations_for_ranking:
+            v = _month_precip_total(
                 data[name]["df"],
                 data[name]["date_col"],
                 data[name]["prec_col"],
                 y,
+                month,
             )
             if v is not None:
                 vals.append(v)
         if vals:
-            feb_precip_by_year[y] = sum(vals) / len(vals)
-    if len(feb_precip_by_year) < 5:
-        raise ValueError("Fewer than 5 years with February precipitation data.")
-    sorted_years = sorted(feb_precip_by_year.keys(), key=lambda y: feb_precip_by_year[y])
+            month_precip_by_year[y] = sum(vals) / len(vals)
+    if len(month_precip_by_year) < 5:
+        raise ValueError(
+            f"Fewer than 5 years with {calendar.month_name[month]} precipitation data."
+        )
+    sorted_years = sorted(month_precip_by_year.keys(), key=lambda y: month_precip_by_year[y])
     analog_years = sorted_years[:5]
 
-    # For each pair and each metric: average of daily (Target - Control) over all February days.
-    # Expected = mean of all those daily diffs pooled across the 5 analog years.
-    # Avg_2026 = mean of daily diffs in report-year February. Enhancement = Avg_2026 - Expected.
-    all_years = analog_years + [year]
+    # MATLAB-style: one target and one control value per year (month-end for SWE/SNWD;
+    # month precip total for accum). expecteddiff = mean(T_analog) - mean(C_analog);
+    # actualdiff = T_report - C_report; enhancement = actualdiff - expecteddiff.
     month_name = calendar.month_name[month]
     table_dict = {}
     for target, control, row_label in pairs:
         table_dict[row_label] = {}
-        for metric, target_col, control_col in [
-            ("Snow Depth (in)", data[target]["snwd_col"], data[control]["snwd_col"]),
-            ("Snow-Water Eq (in)", data[target]["swe_col"], data[control]["swe_col"]),
-            ("Accum. Precip (in)", data[target]["prec_col"], data[control]["prec_col"]),
+        for metric, target_col, control_col, use_precip_total in [
+            ("Snow Depth (in)", data[target]["snwd_col"], data[control]["snwd_col"], False),
+            ("Snow-Water Eq (in)", data[target]["swe_col"], data[control]["swe_col"], False),
+            ("Accum. Precip (in)", data[target]["prec_col"], data[control]["prec_col"], True),
         ]:
-            # Pool all daily (Target - Control) in February for each year
-            daily_diffs_by_year = {}
-            for y in all_years:
-                daily_diffs = _february_daily_diffs(
+            analog_year_diffs = []
+            for y in analog_years:
+                t_v, c_v = _matlab_style_metric(
                     data[target]["df"],
                     data[target]["date_col"],
                     target_col,
@@ -151,23 +170,30 @@ def compute_enhancement_table(month=2, year=2026):
                     data[control]["date_col"],
                     control_col,
                     y,
+                    month,
+                    use_month_precip_total=use_precip_total,
                 )
-                daily_diffs_by_year[y] = daily_diffs
+                if t_v is not None and c_v is not None:
+                    analog_year_diffs.append(t_v - c_v)
 
-            analog_pool = []
-            for y in analog_years:
-                analog_pool.extend(daily_diffs_by_year.get(y, []))
-            year_diffs = daily_diffs_by_year.get(year, [])
+            t_rep, c_rep = _matlab_style_metric(
+                data[target]["df"],
+                data[target]["date_col"],
+                target_col,
+                data[control]["df"],
+                data[control]["date_col"],
+                control_col,
+                year,
+                month,
+                use_month_precip_total=use_precip_total,
+            )
 
-            if not analog_pool:
+            if not analog_year_diffs or t_rep is None or c_rep is None:
                 table_dict[row_label][metric] = None
                 continue
-            expected = sum(analog_pool) / len(analog_pool)
-            avg_2026 = (sum(year_diffs) / len(year_diffs)) if year_diffs else None
-            if avg_2026 is not None:
-                table_dict[row_label][metric] = avg_2026 - expected
-            else:
-                table_dict[row_label][metric] = None
+            expecteddiff = sum(analog_year_diffs) / len(analog_year_diffs)
+            actualdiff = t_rep - c_rep
+            table_dict[row_label][metric] = actualdiff - expecteddiff
 
     # LaTeX table
     def fmt(v):
@@ -196,7 +222,7 @@ def compute_enhancement_table(month=2, year=2026):
     latex_lines.extend([
         "    \\hline",
         "  \\end{tabular}",
-        f"  \\caption{{{month_name} {year} enhancement estimated by taking the difference between observations at sites in La Sal and Abajo compared to the difference observed in the driest five recent years ({', '.join(map(str, analog_years))}).}}",
+        f"  \\caption{{{month_name} {year} enhancement (MATLAB-style): month-end snow depth and SWE, and calendar-month precipitation totals, at each La Sal site minus its Abajo pair; expected gap $=$ mean of those gaps in the five driest {month_name}s since 2013 ({', '.join(map(str, analog_years))}), selected by average {month_name} precipitation at La sal upper and Lasal Mtn lower; enhancement $=$ report-year gap minus expected gap.}}",
         "  \\label{fig:enhancement}",
         "\\end{table}",
     ])
@@ -213,7 +239,7 @@ def main():
     p.add_argument("-o", "--output", type=str, default=None, help="Write LaTeX table to this file")
     args = p.parse_args()
     table_dict, analog_years, latex_str = compute_enhancement_table(month=args.month, year=args.year)
-    print("Analog years (5 driest Februarys since 2013):", analog_years)
+    print(f"Analog years (5 driest {calendar.month_name[args.month]}s since 2013):", analog_years)
     print("Enhancement table:")
     for row in ["La sal Upper", "La sal Lower"]:
         print(f"  {row}:", table_dict[row])
