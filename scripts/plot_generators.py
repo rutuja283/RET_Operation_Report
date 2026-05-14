@@ -666,7 +666,7 @@ def plot_month_precip_total_climatology_treatments(
     fig, axes = plt.subplots(n_rows, 3, figsize=(8.8, 3.0 * n_rows), squeeze=False)
 
     clim_years = [y for y in range(climatology_start_year, year) if y < year]
-    box_label = f"{month_name[:3]}\nprior yrs"
+    box_label = month_name  # x-axis tick: calendar month only (e.g. April)
 
     for row, (treat, ctrl) in enumerate(pairs):
         ax_t = axes[row, 0]
@@ -724,8 +724,8 @@ def plot_month_precip_total_climatology_treatments(
             ax.set_title(title, fontsize=10, fontweight="bold")
             ax.tick_params(axis="both", labelsize=8)
 
-        ax_t.set_ylabel("Month total (in)", fontsize=9)
-        ax_c.set_ylabel("Month total (in)", fontsize=9)
+        ax_t.set_ylabel("Accum precip (in)", fontsize=9)
+        ax_c.set_ylabel("Accum precip (in)", fontsize=9)
         ax_d.set_ylabel("Difference (in)", fontsize=9)
         ax_d.axhline(0.0, color="black", linestyle="--", linewidth=1, alpha=0.5)
 
