@@ -12,6 +12,44 @@ import argparse
 sys.path.insert(0, str(Path(__file__).parent))
 from config import CSV_DIR, BASE_DIR
 
+_MDY = re.compile(r"^\s*(\d{1,2})/(\d{1,2})/(\d{4})\s*$")
+
+
+def _hhmm_display(raw):
+    """Normalize time token to 4-digit HHMM for display (e.g. 352 -> 0352)."""
+    s = str(raw).strip()
+    if not s or s in ("---", "--", "-"):
+        return None
+    if s.isdigit():
+        return s.zfill(4)[-4:]
+    return s
+
+
+def _tabular_line_to_status(parts):
+    """
+    Build WETA status string from tab row:
+    Date, ON, OFF, ... optional trailing note (column 6+).
+    """
+    on_raw = parts[1].strip() if len(parts) > 1 else "---"
+    off_raw = parts[2].strip() if len(parts) > 2 else "---"
+    note_parts = [p.strip() for p in parts[5:] if p.strip()]
+    note = " ".join(note_parts).strip()
+
+    on_t = _hhmm_display(on_raw)
+    off_t = _hhmm_display(off_raw)
+    segs = []
+    if on_t:
+        segs.append(f"{on_t} on")
+    if off_t:
+        segs.append(f"{off_t} off")
+    if not segs:
+        status = "off"
+    else:
+        status = " / ".join(segs)
+    if note:
+        status = f"{status} / {note}"
+    return status
+
 
 def _parse_operations_rows(data, default_year, default_month):
     """
@@ -39,13 +77,22 @@ def _parse_operations_rows(data, default_year, default_month):
                 end_day = int(re.search(r'\d+', end_str).group())
                 days = list(range(start_day, end_day + 1))
         else:
+            date_obj = None
             try:
-                date_obj = datetime.strptime(date_str.strip(), "%d-%b-%Y")
+                date_obj = datetime.strptime(date_str.strip(), "%m/%d/%Y")
+            except Exception:
+                pass
+            if date_obj is not None:
                 days = [date_obj.day]
                 year, month = date_obj.year, date_obj.month
-            except Exception:
-                day = int(re.search(r'\d+', date_str).group())
-                days = [day]
+            else:
+                try:
+                    date_obj = datetime.strptime(date_str.strip(), "%d-%b-%Y")
+                    days = [date_obj.day]
+                    year, month = date_obj.year, date_obj.month
+                except Exception:
+                    day = int(re.search(r'\d+', date_str).group())
+                    days = [day]
 
         on_time = None
         off_time = None
@@ -72,18 +119,22 @@ def _parse_operations_rows(data, default_year, default_month):
                         off_time = time_val
             status_display = status_str
         else:
-            time_match = re.search(r'(\d{4})', status_str)
+            time_match = re.search(r"(\d{3,4})", status_str)
             if time_match:
                 time_val = time_match.group(1)
                 if "off" in status_lower:
                     off_time = time_val
-                    is_on = True
+                    is_on = False
                     status_display = status_str
                 elif "on" in status_lower:
                     on_time = time_val
                     is_on = True
                     status_display = status_str
 
+        # Operating / green highlight: explicit ON (plain or HHMM-on), not off-only lines
+        is_on = status_lower.strip() == "on" or bool(
+            re.search(r"\d{3,4}\s+on\b", status_lower)
+        )
         for day in days:
             date = datetime(year, month, day)
             rows.append({
@@ -116,13 +167,19 @@ def parse_operations_from_file(path, month, year):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
+            if "\t" in line:
+                parts = [p.strip() for p in line.split("\t")]
+                if len(parts) >= 3 and _MDY.match(parts[0]):
+                    status = _tabular_line_to_status(parts)
+                    data.append((parts[0], status))
+                    continue
+                parts_tab = [p.strip() for p in line.split("\t", 1)]
+                if len(parts_tab) >= 2:
+                    data.append((parts_tab[0], parts_tab[1]))
+                    continue
             parts = [p.strip() for p in line.split(",", 1)]
             if len(parts) >= 2:
                 data.append((parts[0], parts[1]))
-            elif len(parts) == 1 and "\t" in line:
-                parts = [p.strip() for p in line.split("\t", 1)]
-                if len(parts) >= 2:
-                    data.append((parts[0], parts[1]))
     return _parse_operations_rows(data, year, month)
 
 
