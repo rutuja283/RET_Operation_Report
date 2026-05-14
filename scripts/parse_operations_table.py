@@ -335,8 +335,12 @@ def _run(operations_input=None, month=None, year=None):
             data_month, data_year = 1, 2026
 
     csv_path = CSV_DIR / "operations_schedule.csv"
-    df_export = df[['Date', 'Operating']].copy()
+    df_export = df[['Date', 'Operating', 'On_Time', 'Off_Time']].copy()
     df_export['Date'] = df_export['Date'].dt.strftime('%Y-%m-%d')
+    for col in ('On_Time', 'Off_Time'):
+        df_export[col] = df_export[col].apply(
+            lambda x: '' if x is None or (isinstance(x, float) and pd.isna(x)) else str(x).strip()
+        )
     df_export.to_csv(csv_path, index=False)
     print(f"Saved operations CSV to {csv_path}")
 

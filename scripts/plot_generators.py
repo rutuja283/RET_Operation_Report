@@ -160,11 +160,49 @@ def plot_operations_schedule(operations_df, month, year, output_file=None):
     return output_file
 
 
+def _hhmm_token_to_day_fraction(token):
+    """Map HHMM (digits only) to fraction of calendar day from midnight [0, 1)."""
+    if token is None:
+        return None
+    s = str(token).strip()
+    if not s or s in ('---', '--', '-') or s.lower() in ('nan', 'none'):
+        return None
+    if not s.isdigit():
+        return None
+    s = s.zfill(4)[-4:]
+    h, m = int(s[:2]), int(s[2:4])
+    if not (0 <= h <= 23 and 0 <= m <= 59):
+        return None
+    return (h * 60 + m) / (24.0 * 60.0)
+
+
+def _weta_on_day_x_span(day_index, on_frac, off_frac):
+    """
+    Map WETA ON interval within a calendar day to x coordinates.
+    Day ``day_index`` spans [day_index - 0.5, day_index + 0.5] (bar centers at integers).
+    Returns (x_left, x_right) or None if invalid.
+    """
+    day_lo = day_index - 0.5
+    day_hi = day_index + 0.5
+    if on_frac is None:
+        return (day_lo, day_hi)
+    left = day_lo + on_frac
+    if off_frac is not None and off_frac > on_frac:
+        right = day_lo + off_frac
+    else:
+        right = day_hi
+    left = max(left, day_lo)
+    right = min(right, day_hi)
+    if right <= left:
+        return None
+    return (left, right)
+
+
 def plot_precipitation_summary(stations_data, operations_df, month, year, output_file=None):
     """
     Bar chart of daily precipitation (from Precipitation Accumulation) in inches,
-    with light green vertical bands for WETA operating periods. One bar per station per day.
-    Uses numeric x (0..n_days) so bars and WETA bands align; x-ticks show dates at readable spacing.
+    with green vertical bands for WETA **ON** periods (sub-day when ON/OFF times are known).
+    One bar per station per day. Uses numeric x (0..n_days) so bars and WETA bands align.
     """
     month_start = datetime(year, month, 1)
     if month == 12:
@@ -179,19 +217,42 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     # Use numeric x so bars and axvspan share the same scale
     ax.set_xlim(-0.5, n_days - 0.5)
     
-    # Light green vertical bands for WETA operating periods (numeric x: day index)
+    # Green bands: only the portion of each day when WETA is ON (from schedule times when available)
     if not operations_df.empty and 'Date' in operations_df.columns:
         ops = operations_df.copy()
         ops['Date'] = pd.to_datetime(ops['Date'], errors='coerce').dt.normalize()
         month_ops = ops[(ops['Date'] >= month_start) & (ops['Date'] <= month_end)]
         if not month_ops.empty:
-            operating_dates = set(
-                month_ops.loc[month_ops['Operating'] == True, 'Date'].dt.date.unique()
-            )
-            print(f"   Highlighting {len(operating_dates)} WETA operating dates")
-            for j, d in enumerate(dates):
-                if d.date() in operating_dates:
-                    ax.axvspan(j - 0.5, j + 0.5, color='#90EE90', alpha=0.35, zorder=0)
+            on_rows = month_ops[month_ops['Operating'] == True]
+            n_spans = 0
+            for _, row in on_rows.iterrows():
+                d = row['Date'].date()
+                day_indices = [j for j, dt in enumerate(dates) if dt.date() == d]
+                if not day_indices:
+                    continue
+                j = day_indices[0]
+
+                on_t = ''
+                if 'On_Time' in row.index and pd.notna(row['On_Time']):
+                    on_t = str(row['On_Time']).strip()
+                off_t = ''
+                if 'Off_Time' in row.index and pd.notna(row['Off_Time']):
+                    off_t = str(row['Off_Time']).strip()
+                f_on = _hhmm_token_to_day_fraction(on_t) if on_t else None
+                f_off = _hhmm_token_to_day_fraction(off_t) if off_t else None
+                span = _weta_on_day_x_span(j, f_on, f_off)
+                if span:
+                    x0, x1 = span
+                    ax.axvspan(
+                        x0, x1,
+                        facecolor='#2ecc71',
+                        alpha=0.45,
+                        edgecolor='#145a32',
+                        linewidth=0.9,
+                        zorder=0,
+                    )
+                    n_spans += 1
+            print(f"   WETA ON highlights: {len(on_rows)} day(s), {n_spans} time window(s)")
     
     # Bar chart: one bar per station per day (x = day index 0..n_days-1)
     n_stations = len(stations_data)

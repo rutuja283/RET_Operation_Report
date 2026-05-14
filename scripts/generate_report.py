@@ -32,8 +32,10 @@ def load_operations_data(operations_csv=None):
     Load operations schedule data
     
     Expected CSV format:
-    Date, Operating (or similar boolean column)
+    Date, Operating (or similar boolean column), optional On_Time, Off_Time (HHMM)
+    for sub-day highlights on precipitation plots.
     """
+    empty_cols = ['Date', 'Operating', 'On_Time', 'Off_Time']
     if operations_csv is None:
         # Look for operations CSV in data directory
         ops_files = list(CSV_DIR.glob("*operation*.csv")) + list(CSV_DIR.glob("*schedule*.csv"))
@@ -41,12 +43,12 @@ def load_operations_data(operations_csv=None):
             operations_csv = ops_files[0]
         else:
             print("Warning: No operations schedule CSV found. Creating empty DataFrame.")
-            return pd.DataFrame(columns=['Date', 'Operating'])
+            return pd.DataFrame(columns=empty_cols)
     
     operations_csv = Path(operations_csv)
     if not operations_csv.exists():
         print(f"Warning: Operations file not found: {operations_csv}")
-        return pd.DataFrame(columns=['Date', 'Operating'])
+        return pd.DataFrame(columns=empty_cols)
     
     df = pd.read_csv(operations_csv)
     
@@ -59,7 +61,7 @@ def load_operations_data(operations_csv=None):
     
     if date_col is None:
         print("Warning: Could not find date column in operations file")
-        return pd.DataFrame(columns=['Date', 'Operating'])
+        return pd.DataFrame(columns=empty_cols)
     
     df[date_col] = pd.to_datetime(df[date_col])
     df = df.rename(columns={date_col: 'Date'})
@@ -76,8 +78,20 @@ def load_operations_data(operations_csv=None):
     else:
         # Assume all dates are operating if column not found
         df['Operating'] = True
-    
-    return df[['Date', 'Operating']]
+
+    for tcol in ('On_Time', 'Off_Time'):
+        if tcol not in df.columns:
+            df[tcol] = ''
+        else:
+            df[tcol] = (
+                df[tcol]
+                .fillna('')
+                .astype(str)
+                .str.strip()
+                .replace({'nan': '', 'None': ''})
+            )
+
+    return df[['Date', 'Operating', 'On_Time', 'Off_Time']]
 
 
 def generate_all_plots(month, year, operations_csv=None, 
