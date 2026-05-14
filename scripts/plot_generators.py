@@ -905,7 +905,7 @@ def plot_precip_accum_timeseries_vs_climatology(
     axes[-1, 1].set_xlabel("Date", fontsize=9)
 
     fig.suptitle(
-        f"SNOTEL precipitation in {month_name} from 1st — {year} vs climatology",
+        f"SNOTEL precipitation in {month_name} — {year} vs climatology",
         fontsize=11,
         y=1.01,
     )

@@ -199,7 +199,7 @@ def generate_all_plots(month, year, operations_csv=None,
     except Exception as e:
         print(f"   Error: {e}")
 
-    print("\n5. Generating daily precip accumulation vs climatology (month window)...")
+    print("\n5. Generating daily precip accumulation vs climatology...")
     try:
         out2 = plot_precip_accum_timeseries_vs_climatology(month, year)
         if out2:
