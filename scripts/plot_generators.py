@@ -675,11 +675,11 @@ def plot_precip_accum_timeseries_vs_climatology(
     output_file=None,
 ):
     """
-    Daily SNOTEL precipitation accumulation (cumulative gauge, inches) for the
-    report calendar month: solid lines = report year at treatment and control;
-    dashed = day-of-month median across climatology years. Right column: daily
-    treatment minus control vs median of that difference (same style as SWE
-    comparison figures).
+    Daily **month-to-date** precipitation (in) for the report calendar month,
+    anchored to the 1st of the month: each day shows SNOTEL accumulation that
+    day minus accumulation on the 1st (same as the boxplot's monthly total when
+    evaluated on the last day). Solid = report year; dashed = day-of-month median
+    across climatology years. Right column: treatment minus control.
     """
     if pairs is None:
         pairs = [
@@ -711,8 +711,16 @@ def plot_precip_accum_timeseries_vs_climatology(
             return np.nan
         return float(ser.get(ts.normalize(), np.nan))
 
-    def median_across_years(ser, m, dom):
-        vals = [value_on(ser, y, m, dom) for y in clim_years]
+    def anchored_on(ser, y, m, dom):
+        """Precip within month through day `dom`: accum(dom) - accum(1st)."""
+        v0 = value_on(ser, y, m, 1)
+        v1 = value_on(ser, y, m, dom)
+        if not (np.isfinite(v0) and np.isfinite(v1)):
+            return np.nan
+        return float(v1 - v0)
+
+    def median_anchored(ser, m, dom):
+        vals = [anchored_on(ser, y, m, dom) for y in clim_years]
         vals = [v for v in vals if np.isfinite(v)]
         if not vals:
             return np.nan
@@ -735,10 +743,10 @@ def plot_precip_accum_timeseries_vs_climatology(
 
         x_num = mdates.date2num(report_dates.to_pydatetime())
 
-        v_t_cur = np.array([value_on(ser_t, year, month, d.day) for d in report_dates])
-        v_c_cur = np.array([value_on(ser_c, year, month, d.day) for d in report_dates])
-        v_t_med = np.array([median_across_years(ser_t, month, d.day) for d in report_dates])
-        v_c_med = np.array([median_across_years(ser_c, month, d.day) for d in report_dates])
+        v_t_cur = np.array([anchored_on(ser_t, year, month, d.day) for d in report_dates])
+        v_c_cur = np.array([anchored_on(ser_c, year, month, d.day) for d in report_dates])
+        v_t_med = np.array([median_anchored(ser_t, month, d.day) for d in report_dates])
+        v_c_med = np.array([median_anchored(ser_c, month, d.day) for d in report_dates])
 
         lab_t = STATION_DISPLAY_NAMES.get(treat, treat)
         lab_c = STATION_DISPLAY_NAMES.get(ctrl, ctrl)
@@ -748,7 +756,7 @@ def plot_precip_accum_timeseries_vs_climatology(
         ax_l.plot(x_num, v_c_cur, "r-", linewidth=1.8, label=f"{lab_c} ({str(year)[-2:]})")
         ax_l.plot(x_num, v_c_med, "r--", linewidth=1.2, label=f"{lab_c} {clim_label}")
 
-        ax_l.set_ylabel("Precipitation\naccumulation (in)", fontsize=9)
+        ax_l.set_ylabel(f"{month_name[:3]} month-to-date\nprecip (in)", fontsize=9)
         ax_l.grid(True, alpha=0.35)
         ax_l.legend(loc="upper left", fontsize=7, framealpha=0.92)
         ax_l.set_title(
@@ -761,8 +769,8 @@ def plot_precip_accum_timeseries_vs_climatology(
         for d in report_dates:
             diffs = []
             for y in clim_years:
-                a = value_on(ser_t, y, month, d.day)
-                b = value_on(ser_c, y, month, d.day)
+                a = anchored_on(ser_t, y, month, d.day)
+                b = anchored_on(ser_c, y, month, d.day)
                 if np.isfinite(a) and np.isfinite(b):
                     diffs.append(a - b)
             d_med_list.append(float(np.nanmedian(diffs)) if diffs else np.nan)
@@ -771,7 +779,7 @@ def plot_precip_accum_timeseries_vs_climatology(
         ax_r.plot(x_num, d_cur, "g-", linewidth=1.8, label=wy_short)
         ax_r.plot(x_num, d_med, "g--", linewidth=1.2, label=clim_label)
         ax_r.axhline(0.0, color="black", linewidth=0.9, linestyle="-", alpha=0.45)
-        ax_r.set_ylabel("Δ Accum.\nprecip (in)", fontsize=9)
+        ax_r.set_ylabel(f"Δ {month_name[:3]} month-to-date\n(in)", fontsize=9)
         ax_r.grid(True, alpha=0.35)
         ax_r.legend(loc="upper left", fontsize=7, framealpha=0.92)
         ax_r.set_title(
@@ -789,7 +797,7 @@ def plot_precip_accum_timeseries_vs_climatology(
     axes[-1, 1].set_xlabel("Date", fontsize=9)
 
     fig.suptitle(
-        f"SNOTEL precipitation accumulation — {month_name} {year} vs climatology",
+        f"SNOTEL precipitation in {month_name} (month-to-date from 1st) — {year} vs climatology",
         fontsize=11,
         y=1.01,
     )
