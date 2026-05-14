@@ -864,7 +864,7 @@ def plot_precip_accum_timeseries_vs_climatology(
         ax_l.plot(x_num, v_c_cur, "r-", linewidth=1.8, label=f"{lab_c} ({str(year)[-2:]})")
         ax_l.plot(x_num, v_c_med, "r--", linewidth=1.2, label=f"{lab_c} {clim_label}")
 
-        ax_l.set_ylabel(f"{month_name[:3]} month-to-date\nprecip (in)", fontsize=9)
+        ax_l.set_ylabel("Accum precip (in)", fontsize=9)
         ax_l.grid(True, alpha=0.35)
         ax_l.legend(loc="upper left", fontsize=7, framealpha=0.92)
         ax_l.set_title(
@@ -887,7 +887,7 @@ def plot_precip_accum_timeseries_vs_climatology(
         ax_r.plot(x_num, d_cur, "g-", linewidth=1.8, label=wy_short)
         ax_r.plot(x_num, d_med, "g--", linewidth=1.2, label=clim_label)
         ax_r.axhline(0.0, color="black", linewidth=0.9, linestyle="-", alpha=0.45)
-        ax_r.set_ylabel(f"Δ {month_name[:3]} month-to-date\n(in)", fontsize=9)
+        ax_r.set_ylabel("Δ Accum precip (in)", fontsize=9)
         ax_r.grid(True, alpha=0.35)
         ax_r.legend(loc="upper left", fontsize=7, framealpha=0.92)
         ax_r.set_title(
