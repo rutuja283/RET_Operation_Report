@@ -534,19 +534,22 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
 def plot_month_precip_total_climatology_treatments(
     month,
     year,
-    station_names=None,
+    pairs=None,
     climatology_start_year=2013,
     output_file=None,
 ):
     """
-    One row, two columns: La sal upper and Lasal Mtn lower.
-    Boxplot of calendar-month precipitation totals (SNOTEL accumulation on the
-    last day of the month minus the first) for each prior year from
-    climatology_start_year through year-1 (report year excluded). Red marker:
-    report year's monthly total.
+    For each treatment–control pair, a row of three panels (like SWE boxplots):
+    calendar-month precipitation total at treatment, at control, and treatment
+    minus control. Month total = SNOTEL accumulation on last day minus first day
+    of that month. Boxes = prior years (climatology_start_year .. year-1); red
+    markers = report year (excluded from boxes).
     """
-    if station_names is None:
-        station_names = ["La sal upper", "Lasal Mtn lower"]
+    if pairs is None:
+        pairs = [
+            ("La sal upper", "Buckboard Flat"),
+            ("Lasal Mtn lower", "Camp jackson"),
+        ]
 
     month_name = calendar.month_name[month]
 
@@ -571,81 +574,125 @@ def plot_month_precip_total_climatology_treatments(
             flier.set_markersize(3)
             flier.set_alpha(0.9)
 
-    fig, axes = plt.subplots(1, len(station_names), figsize=(8.2, 3.2), sharey=False)
-    if len(station_names) == 1:
-        axes = [axes]
+    # Load each station once
+    station_ctx = {}
 
-    for ax, station in zip(axes, station_names):
+    def ensure_ctx(station):
+        if station in station_ctx:
+            return station_ctx[station]
         loaded = load_station_data(station)
         if loaded is None:
-            ax.set_title(STATION_DISPLAY_NAMES.get(station, station), fontsize=10, fontweight="bold")
-            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
-            continue
+            station_ctx[station] = None
+            return None
         df, date_col = loaded
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
         df = df[df[date_col].notna()].copy()
-        prec_col = _find_precip_accum_column(df)
-        if prec_col is None:
-            ax.text(0.5, 0.5, "No precip column", ha="center", va="center", transform=ax.transAxes)
+        pc = _find_precip_accum_column(df)
+        if pc is None:
+            station_ctx[station] = None
+            return None
+        station_ctx[station] = (df, date_col, pc)
+        return station_ctx[station]
+
+    def total_for(station, y):
+        ctx = ensure_ctx(station)
+        if ctx is None:
+            return None
+        df, date_col, pc = ctx
+        return _month_precip_total(df, date_col, pc, y, month)
+
+    n_rows = len(pairs)
+    fig, axes = plt.subplots(n_rows, 3, figsize=(8.8, 3.0 * n_rows), squeeze=False)
+
+    clim_years = [y for y in range(climatology_start_year, year) if y < year]
+    box_label = f"{month_name[:3]}\nprior yrs"
+
+    for row, (treat, ctrl) in enumerate(pairs):
+        ax_t = axes[row, 0]
+        ax_c = axes[row, 1]
+        ax_d = axes[row, 2]
+
+        t_clim, c_clim, d_clim = [], [], []
+        for y in clim_years:
+            t = total_for(treat, y)
+            c = total_for(ctrl, y)
+            if t is not None and c is not None:
+                t_clim.append(t)
+                c_clim.append(c)
+                d_clim.append(t - c)
+
+        t_rep = total_for(treat, year)
+        c_rep = total_for(ctrl, year)
+        d_rep = None
+        if t_rep is not None and c_rep is not None:
+            d_rep = t_rep - c_rep
+
+        lab_t = STATION_DISPLAY_NAMES.get(treat, treat)
+        lab_c = STATION_DISPLAY_NAMES.get(ctrl, ctrl)
+
+        if len(t_clim) == 0:
+            for ax in (ax_t, ax_c, ax_d):
+                ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
             continue
 
-        clim_vals = []
-        for y in range(climatology_start_year, year + 1):
-            if y == year:
-                continue
-            v = _month_precip_total(df, date_col, prec_col, y, month)
-            if v is not None:
-                clim_vals.append(v)
-
-        hi = _month_precip_total(df, date_col, prec_col, year, month)
-
-        if len(clim_vals) == 0:
-            ax.text(0.5, 0.5, "No climatology", ha="center", va="center", transform=ax.transAxes)
-            ax.set_title(STATION_DISPLAY_NAMES.get(station, station), fontsize=10, fontweight="bold")
-            continue
-
-        bp = ax.boxplot(
-            [clim_vals],
-            positions=[1],
-            widths=0.45,
-            labels=[f"{month_name[:3]}\nprior yrs"],
-            showfliers=True,
-            patch_artist=True,
-        )
-        style_boxplot(bp)
-
-        if hi is not None and np.isfinite(hi):
-            ax.scatter(
-                [1],
-                [hi],
-                s=42,
-                color="red",
-                edgecolors="black",
-                linewidths=1.1,
-                zorder=25,
-                marker="o",
+        for ax, vals, hi, title in (
+            (ax_t, t_clim, t_rep, lab_t),
+            (ax_c, c_clim, c_rep, lab_c),
+            (ax_d, d_clim, d_rep, "TREATMENT − CONTROL"),
+        ):
+            bp = ax.boxplot(
+                [vals],
+                positions=[1],
+                widths=0.45,
+                labels=[box_label],
+                showfliers=True,
+                patch_artist=True,
             )
+            style_boxplot(bp)
+            if hi is not None and np.isfinite(hi):
+                ax.scatter(
+                    [1],
+                    [hi],
+                    s=42,
+                    color="red",
+                    edgecolors="black",
+                    linewidths=1.1,
+                    zorder=25,
+                    marker="o",
+                )
+            ax.set_title(title, fontsize=10, fontweight="bold")
+            ax.tick_params(axis="both", labelsize=8)
 
-        disp = STATION_DISPLAY_NAMES.get(station, station)
-        ax.set_title(disp, fontsize=10, fontweight="bold")
-        ax.set_ylabel("Month total (in)", fontsize=9)
-        ax.tick_params(axis="both", labelsize=8)
+        ax_t.set_ylabel("Month total (in)", fontsize=9)
+        ax_c.set_ylabel("Month total (in)", fontsize=9)
+        ax_d.set_ylabel("Difference (in)", fontsize=9)
+        ax_d.axhline(0.0, color="black", linestyle="--", linewidth=1, alpha=0.5)
 
-        all_y = np.array(clim_vals + ([hi] if hi is not None else []), dtype=float)
-        y_max = float(np.nanmax(all_y)) if all_y.size else 1.0
-        y_min = float(np.nanmin(all_y)) if all_y.size else 0.0
-        pad = 0.08 * max(y_max - y_min, 0.05)
-        ax.set_ylim(max(0, y_min - pad), y_max + pad)
+        # Shared y-scale for treatment and control in this row
+        tc = np.array(t_clim + c_clim + ([t_rep, c_rep] if t_rep is not None and c_rep is not None else []), dtype=float)
+        tc = tc[np.isfinite(tc)]
+        if tc.size:
+            pad = 0.08 * max(float(np.nanmax(tc) - np.nanmin(tc)), 0.05)
+            y0 = max(0.0, float(np.nanmin(tc)) - pad)
+            y1 = float(np.nanmax(tc)) + pad
+            ax_t.set_ylim(y0, y1)
+            ax_c.set_ylim(y0, y1)
+
+        dd = np.array(d_clim + ([d_rep] if d_rep is not None else []), dtype=float)
+        dd = dd[np.isfinite(dd)]
+        if dd.size:
+            d_pad = 0.1 * max(float(np.nanmax(dd) - np.nanmin(dd)), 0.05)
+            ax_d.set_ylim(float(np.nanmin(dd)) - d_pad, float(np.nanmax(dd)) + d_pad)
 
     fig.suptitle(
-        f"{month_name} accumulated precipitation vs. prior-year climatology (report year excluded from box)",
-        fontsize=9.5,
-        y=1.03,
+        f"{month_name} precipitation total (SNOTEL) — treatment, control, and difference vs prior years",
+        fontsize=10,
+        y=1.01,
     )
     try:
-        plt.tight_layout()
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
     except Exception:
-        plt.subplots_adjust(bottom=0.2, top=0.82, wspace=0.35)
+        plt.subplots_adjust(hspace=0.4, wspace=0.3, top=0.92)
 
     if output_file is None:
         output_file = PLOTS_DIR / f"{year}{month:02d}_PrecipMonthTotal_LaSalTreatments.{PLOT_FORMAT}"
