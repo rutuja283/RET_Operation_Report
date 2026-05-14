@@ -783,7 +783,7 @@ def plot_precip_accum_timeseries_vs_climatology(
     output_file=None,
 ):
     """
-    Daily **month-to-date** precipitation (in) for the report calendar month,
+    Daily precipitation (in) for the report calendar month,
     anchored to the 1st of the month: each day shows SNOTEL accumulation that
     day minus accumulation on the 1st (same as the boxplot's monthly total when
     evaluated on the last day). Solid = report year; dashed = day-of-month median
@@ -905,7 +905,7 @@ def plot_precip_accum_timeseries_vs_climatology(
     axes[-1, 1].set_xlabel("Date", fontsize=9)
 
     fig.suptitle(
-        f"SNOTEL precipitation in {month_name}, month-to-date from 1st — {year} vs climatology",
+        f"SNOTEL precipitation in {month_name} from 1st — {year} vs climatology",
         fontsize=11,
         y=1.01,
     )
