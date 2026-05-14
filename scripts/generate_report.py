@@ -17,8 +17,12 @@ from config import (
     STATION_NAME_MAP
 )
 from plot_generators import (
-    plot_operations_schedule, plot_precipitation_summary, 
-    plot_snow_depth_boxplots, load_station_data, handle_snotel_cumulative
+    plot_operations_schedule,
+    plot_precipitation_summary,
+    plot_snow_depth_boxplots,
+    plot_month_precip_total_climatology_treatments,
+    load_station_data,
+    handle_snotel_cumulative,
 )
 
 
@@ -168,6 +172,15 @@ def generate_all_plots(month, year, operations_csv=None,
                 except Exception as e:
                     print(f"      Error: {e}")
         print(f"   Generated {plot_count} boxplot combinations")
+    except Exception as e:
+        print(f"   Error: {e}")
+
+    # 4. Treatment-site calendar-month precip totals vs. prior-year climatology (one figure)
+    print("\n4. Generating treatment-site month precip climatology boxplots...")
+    try:
+        out = plot_month_precip_total_climatology_treatments(month, year)
+        if out:
+            print(f"   OK: {out}")
     except Exception as e:
         print(f"   Error: {e}")
     

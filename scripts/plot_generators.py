@@ -240,6 +240,30 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     return output_file
 
 
+def _find_precip_accum_column(df):
+    for col in df.columns:
+        c = str(col).lower()
+        if "precipitation accumulation" in c or ("precip" in c and "accum" in c):
+            return col
+    return None
+
+
+def _month_precip_total(df, date_col, prec_col, year, month):
+    """Calendar-month precip from SNOTEL accumulation: last day minus first day of month (inches)."""
+    last_day = calendar.monthrange(year, month)[1]
+    start_date = f"{year}-{month:02d}-01"
+    end_date = f"{year}-{month:02d}-{last_day:02d}"
+    start_row = df[df[date_col].dt.strftime("%Y-%m-%d") == start_date]
+    end_row = df[df[date_col].dt.strftime("%Y-%m-%d") == end_date]
+    if start_row.empty or end_row.empty:
+        return None
+    start_val = start_row.iloc[0][prec_col]
+    end_val = end_row.iloc[0][prec_col]
+    if pd.isna(start_val) or pd.isna(end_val):
+        return None
+    return float(end_val - start_val)
+
+
 def _find_swe_or_snow_depth_column(df, prefer_swe=True):
     """Return column name for SWE (snow water equivalent) or snow depth. Prefer SWE when prefer_swe=True."""
     swe_col = None
@@ -504,4 +528,129 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     print(f"Saved: {output_file}")
     plt.close()
     
+    return output_file
+
+
+def plot_month_precip_total_climatology_treatments(
+    month,
+    year,
+    station_names=None,
+    climatology_start_year=2013,
+    output_file=None,
+):
+    """
+    One row, two columns: La sal upper and Lasal Mtn lower.
+    Boxplot of calendar-month precipitation totals (SNOTEL accumulation on the
+    last day of the month minus the first) for each prior year from
+    climatology_start_year through year-1 (report year excluded). Red marker:
+    report year's monthly total.
+    """
+    if station_names is None:
+        station_names = ["La sal upper", "Lasal Mtn lower"]
+
+    month_name = calendar.month_name[month]
+
+    def style_boxplot(bp):
+        for box in bp["boxes"]:
+            box.set_facecolor("#c6dbef")
+            box.set_edgecolor("#1f77b4")
+            box.set_linewidth(1.2)
+        for whisker in bp["whiskers"]:
+            whisker.set_color("#1f77b4")
+            whisker.set_linewidth(1)
+        for cap in bp["caps"]:
+            cap.set_color("#1f77b4")
+            cap.set_linewidth(1)
+        for median in bp["medians"]:
+            median.set_color("#1f77b4")
+            median.set_linewidth(1.5)
+        for flier in bp["fliers"]:
+            flier.set_marker("o")
+            flier.set_markerfacecolor("none")
+            flier.set_markeredgecolor("#1f77b4")
+            flier.set_markersize(3)
+            flier.set_alpha(0.9)
+
+    fig, axes = plt.subplots(1, len(station_names), figsize=(8.2, 3.2), sharey=False)
+    if len(station_names) == 1:
+        axes = [axes]
+
+    for ax, station in zip(axes, station_names):
+        loaded = load_station_data(station)
+        if loaded is None:
+            ax.set_title(STATION_DISPLAY_NAMES.get(station, station), fontsize=10, fontweight="bold")
+            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+            continue
+        df, date_col = loaded
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        df = df[df[date_col].notna()].copy()
+        prec_col = _find_precip_accum_column(df)
+        if prec_col is None:
+            ax.text(0.5, 0.5, "No precip column", ha="center", va="center", transform=ax.transAxes)
+            continue
+
+        clim_vals = []
+        for y in range(climatology_start_year, year + 1):
+            if y == year:
+                continue
+            v = _month_precip_total(df, date_col, prec_col, y, month)
+            if v is not None:
+                clim_vals.append(v)
+
+        hi = _month_precip_total(df, date_col, prec_col, year, month)
+
+        if len(clim_vals) == 0:
+            ax.text(0.5, 0.5, "No climatology", ha="center", va="center", transform=ax.transAxes)
+            ax.set_title(STATION_DISPLAY_NAMES.get(station, station), fontsize=10, fontweight="bold")
+            continue
+
+        bp = ax.boxplot(
+            [clim_vals],
+            positions=[1],
+            widths=0.45,
+            labels=[f"{month_name[:3]}\nprior yrs"],
+            showfliers=True,
+            patch_artist=True,
+        )
+        style_boxplot(bp)
+
+        if hi is not None and np.isfinite(hi):
+            ax.scatter(
+                [1],
+                [hi],
+                s=42,
+                color="red",
+                edgecolors="black",
+                linewidths=1.1,
+                zorder=25,
+                marker="o",
+            )
+
+        disp = STATION_DISPLAY_NAMES.get(station, station)
+        ax.set_title(disp, fontsize=10, fontweight="bold")
+        ax.set_ylabel("Month total (in)", fontsize=9)
+        ax.tick_params(axis="both", labelsize=8)
+
+        all_y = np.array(clim_vals + ([hi] if hi is not None else []), dtype=float)
+        y_max = float(np.nanmax(all_y)) if all_y.size else 1.0
+        y_min = float(np.nanmin(all_y)) if all_y.size else 0.0
+        pad = 0.08 * max(y_max - y_min, 0.05)
+        ax.set_ylim(max(0, y_min - pad), y_max + pad)
+
+    fig.suptitle(
+        f"{month_name} accumulated precipitation vs. prior-year climatology (report year excluded from box)",
+        fontsize=9.5,
+        y=1.03,
+    )
+    try:
+        plt.tight_layout()
+    except Exception:
+        plt.subplots_adjust(bottom=0.2, top=0.82, wspace=0.35)
+
+    if output_file is None:
+        output_file = PLOTS_DIR / f"{year}{month:02d}_PrecipMonthTotal_LaSalTreatments.{PLOT_FORMAT}"
+
+    plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches="tight")
+    print(f"Saved: {output_file}")
+    plt.close()
     return output_file
