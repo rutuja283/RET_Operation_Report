@@ -654,3 +654,156 @@ def plot_month_precip_total_climatology_treatments(
     print(f"Saved: {output_file}")
     plt.close()
     return output_file
+
+
+def _precip_accum_daily_series(df, date_col, prec_col):
+    """Normalized-date index -> numeric accumulation (in)."""
+    d = df[[date_col, prec_col]].copy()
+    d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
+    d = d[d[date_col].notna()]
+    d[prec_col] = pd.to_numeric(d[prec_col], errors="coerce")
+    d = d.drop_duplicates(subset=[date_col], keep="first")
+    d["_d"] = d[date_col].dt.normalize()
+    return d.set_index("_d")[prec_col]
+
+
+def plot_precip_accum_timeseries_vs_climatology(
+    month,
+    year,
+    pairs=None,
+    climatology_start_year=2013,
+    output_file=None,
+):
+    """
+    Daily SNOTEL precipitation accumulation (cumulative gauge, inches) for the
+    report calendar month: solid lines = report year at treatment and control;
+    dashed = day-of-month median across climatology years. Right column: daily
+    treatment minus control vs median of that difference (same style as SWE
+    comparison figures).
+    """
+    if pairs is None:
+        pairs = [
+            ("La sal upper", "Buckboard Flat"),
+            ("Lasal Mtn lower", "Camp jackson"),
+        ]
+
+    last_day = calendar.monthrange(year, month)[1]
+    report_dates = pd.date_range(
+        pd.Timestamp(year, month, 1),
+        pd.Timestamp(year, month, last_day),
+        freq="D",
+    )
+    clim_years = [y for y in range(climatology_start_year, year) if y < year]
+
+    def load_series(station):
+        loaded = load_station_data(station)
+        if loaded is None:
+            return None
+        df, date_col = loaded
+        pc = _find_precip_accum_column(df)
+        if pc is None:
+            return None
+        return _precip_accum_daily_series(df, date_col, pc)
+
+    def value_on(ser, y, m, dom):
+        ts = pd.Timestamp(y, m, dom)
+        if ser is None:
+            return np.nan
+        return float(ser.get(ts.normalize(), np.nan))
+
+    def median_across_years(ser, m, dom):
+        vals = [value_on(ser, y, m, dom) for y in clim_years]
+        vals = [v for v in vals if np.isfinite(v)]
+        if not vals:
+            return np.nan
+        return float(np.nanmedian(vals))
+
+    n_rows = len(pairs)
+    fig, axes = plt.subplots(
+        n_rows, 2, figsize=(11.5, 3.4 * n_rows), sharex=True, squeeze=False
+    )
+
+    month_name = calendar.month_name[month]
+    wy_short = f"{str(year - 1)[-2:]}-{str(year)[-2:]}"
+    clim_label = f"Median ({climatology_start_year}–{year - 1})"
+
+    for row, (treat, ctrl) in enumerate(pairs):
+        ax_l = axes[row, 0]
+        ax_r = axes[row, 1]
+        ser_t = load_series(treat)
+        ser_c = load_series(ctrl)
+
+        x_num = mdates.date2num(report_dates.to_pydatetime())
+
+        v_t_cur = np.array([value_on(ser_t, year, month, d.day) for d in report_dates])
+        v_c_cur = np.array([value_on(ser_c, year, month, d.day) for d in report_dates])
+        v_t_med = np.array([median_across_years(ser_t, month, d.day) for d in report_dates])
+        v_c_med = np.array([median_across_years(ser_c, month, d.day) for d in report_dates])
+
+        lab_t = STATION_DISPLAY_NAMES.get(treat, treat)
+        lab_c = STATION_DISPLAY_NAMES.get(ctrl, ctrl)
+
+        ax_l.plot(x_num, v_t_cur, "b-", linewidth=1.8, label=f"{lab_t} ({str(year)[-2:]})")
+        ax_l.plot(x_num, v_t_med, "b--", linewidth=1.2, label=f"{lab_t} {clim_label}")
+        ax_l.plot(x_num, v_c_cur, "r-", linewidth=1.8, label=f"{lab_c} ({str(year)[-2:]})")
+        ax_l.plot(x_num, v_c_med, "r--", linewidth=1.2, label=f"{lab_c} {clim_label}")
+
+        ax_l.set_ylabel("Precipitation\naccumulation (in)", fontsize=9)
+        ax_l.grid(True, alpha=0.35)
+        ax_l.legend(loc="upper left", fontsize=7, framealpha=0.92)
+        ax_l.set_title(
+            f"Station values — {month_name} {year} vs climatology\n{lab_t} vs {lab_c}",
+            fontsize=9,
+        )
+
+        d_cur = v_t_cur - v_c_cur
+        d_med_list = []
+        for d in report_dates:
+            diffs = []
+            for y in clim_years:
+                a = value_on(ser_t, y, month, d.day)
+                b = value_on(ser_c, y, month, d.day)
+                if np.isfinite(a) and np.isfinite(b):
+                    diffs.append(a - b)
+            d_med_list.append(float(np.nanmedian(diffs)) if diffs else np.nan)
+        d_med = np.array(d_med_list)
+
+        ax_r.plot(x_num, d_cur, "g-", linewidth=1.8, label=wy_short)
+        ax_r.plot(x_num, d_med, "g--", linewidth=1.2, label=clim_label)
+        ax_r.axhline(0.0, color="black", linewidth=0.9, linestyle="-", alpha=0.45)
+        ax_r.set_ylabel("Δ Accum.\nprecip (in)", fontsize=9)
+        ax_r.grid(True, alpha=0.35)
+        ax_r.legend(loc="upper left", fontsize=7, framealpha=0.92)
+        ax_r.set_title(
+            f"Difference (treatment − control)\n{lab_t} − {lab_c}",
+            fontsize=9,
+        )
+
+        for ax in (ax_l, ax_r):
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right", fontsize=8)
+            ax.tick_params(axis="y", labelsize=8)
+
+    axes[-1, 0].set_xlabel("Date", fontsize=9)
+    axes[-1, 1].set_xlabel("Date", fontsize=9)
+
+    fig.suptitle(
+        f"SNOTEL precipitation accumulation — {month_name} {year} vs climatology",
+        fontsize=11,
+        y=1.01,
+    )
+    try:
+        plt.tight_layout(rect=[0, 0, 1, 0.97])
+    except Exception:
+        plt.subplots_adjust(hspace=0.45, wspace=0.28, top=0.93)
+
+    if output_file is None:
+        output_file = (
+            PLOTS_DIR / f"{year}{month:02d}_PrecipAccum_DailyVsClimatology.{PLOT_FORMAT}"
+        )
+
+    plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches="tight")
+    print(f"Saved: {output_file}")
+    plt.close()
+    return output_file

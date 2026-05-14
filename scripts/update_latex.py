@@ -196,6 +196,7 @@ def update_latex_plots(month, year, main_tex_path=None, snowdepth_plot=None):
     report_month_year = f"{month_name} {year}"
     content = content.replace("REPORT_MONTH_YEAR", report_month_year)
     content = content.replace("REPORT_YEAR", str(year))
+    content = content.replace("REPORT_PRIOR_YEAR_END", str(year - 1))
 
     # Write updated content
     with open(main_tex_path, 'w') as f:

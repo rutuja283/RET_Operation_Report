@@ -21,6 +21,7 @@ from plot_generators import (
     plot_precipitation_summary,
     plot_snow_depth_boxplots,
     plot_month_precip_total_climatology_treatments,
+    plot_precip_accum_timeseries_vs_climatology,
     load_station_data,
     handle_snotel_cumulative,
 )
@@ -181,6 +182,14 @@ def generate_all_plots(month, year, operations_csv=None,
         out = plot_month_precip_total_climatology_treatments(month, year)
         if out:
             print(f"   OK: {out}")
+    except Exception as e:
+        print(f"   Error: {e}")
+
+    print("\n5. Generating daily precip accumulation vs climatology (month window)...")
+    try:
+        out2 = plot_precip_accum_timeseries_vs_climatology(month, year)
+        if out2:
+            print(f"   OK: {out2}")
     except Exception as e:
         print(f"   Error: {e}")
     
