@@ -544,7 +544,6 @@ def generate_operations_table_latex(df, month, year):
         latex_lines.append(f"{date_col} & {status_col} \\\\")
         latex_lines.append("\\hline")
     
-    latex_lines.append("\\label{tab:operations_schedule}")
     latex_lines.append("\\end{longtable}")
 
     return "\n".join(latex_lines)

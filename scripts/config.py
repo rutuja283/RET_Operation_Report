@@ -71,5 +71,9 @@ WATER_YEAR_START_DAY = 1
 PLOT_DPI = 300
 PLOT_FORMAT = "png"
 
+# WETA operating highlight — matches LaTeX greenhighlight (RGB 232, 245, 225)
+WETA_OPERATING_RGB = (232 / 255, 245 / 255, 225 / 255)
+WETA_OPERATING_EDGE_RGB = (190 / 255, 215 / 255, 180 / 255)
+
 # Report settings
 REPORT_TITLE_PREFIX = "La Sal Operations Report"

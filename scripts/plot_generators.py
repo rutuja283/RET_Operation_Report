@@ -16,7 +16,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (
     CSV_DIR, PLOTS_DIR, TREATMENT_STATIONS, CONTROL_STATIONS,
-    WATER_YEAR_START_MONTH, WATER_YEAR_START_DAY, PLOT_DPI, PLOT_FORMAT
+    WATER_YEAR_START_MONTH, WATER_YEAR_START_DAY, PLOT_DPI, PLOT_FORMAT,
+    WETA_OPERATING_RGB, WETA_OPERATING_EDGE_RGB,
 )
 
 # Display labels for boxplot panel titles (camel casing for report)
@@ -118,9 +119,9 @@ def plot_operations_schedule(operations_df, month, year, output_file=None):
             ax.axvspan(
                 date - timedelta(hours=12),
                 date + timedelta(hours=12),
-                color="#2ecc71",
-                alpha=0.45,
-                edgecolor="#145a32",
+                facecolor=WETA_OPERATING_RGB,
+                edgecolor=WETA_OPERATING_EDGE_RGB,
+                alpha=0.95,
                 linewidth=0.6,
                 zorder=0,
             )
@@ -237,9 +238,9 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
                     x0, x1 = span
                     ax.axvspan(
                         x0, x1,
-                        facecolor='#2ecc71',
-                        alpha=0.45,
-                        edgecolor='#145a32',
+                        facecolor=WETA_OPERATING_RGB,
+                        edgecolor=WETA_OPERATING_EDGE_RGB,
+                        alpha=0.95,
                         linewidth=0.9,
                         zorder=0,
                     )
@@ -293,7 +294,12 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     handles, labels = ax.get_legend_handles_labels()
     if weta_highlighted:
         handles.append(
-            Patch(facecolor="#2ecc71", edgecolor="#145a32", alpha=0.45, label="WETA operating")
+            Patch(
+                facecolor=WETA_OPERATING_RGB,
+                edgecolor=WETA_OPERATING_EDGE_RGB,
+                alpha=0.95,
+                label="WETA operating",
+            )
         )
         labels.append("WETA operating")
     ax.legend(handles, labels, loc="upper right", ncol=2, framealpha=0.9)
