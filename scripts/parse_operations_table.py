@@ -350,94 +350,172 @@ def parse_operations_data():
     ]
     return _parse_operations_rows(data, default_year=2026, default_month=1)
 
+def _note_from_status(status_text):
+    parts = [p.strip() for p in str(status_text).split(" / ")]
+    note_parts = [
+        p
+        for p in parts
+        if p.lower() not in ("on", "off")
+        and not re.search(r"^\d{3,4}\s+(on|off)\b", p, re.I)
+    ]
+    return " / ".join(note_parts).strip()
+
+
+def _chronological_events(df):
+    """Sorted on/off transitions from parsed operations rows."""
+    events = []
+    for _, row in df.sort_values("Date").iterrows():
+        day = pd.Timestamp(row["Date"]).normalize()
+        note = _note_from_status(row.get("Status_Text", ""))
+        for col, kind in (("On_Time", "on"), ("Off_Time", "off")):
+            tok = row.get(col)
+            if tok is None or (isinstance(tok, float) and pd.isna(tok)):
+                continue
+            hhmm = _hhmm_display(tok)
+            if not hhmm:
+                continue
+            ts = day + pd.Timedelta(hours=int(hhmm[:2]), minutes=int(hhmm[2:]))
+            events.append(
+                {
+                    "ts": ts,
+                    "kind": kind,
+                    "hhmm": hhmm,
+                    "note": note if kind == "on" else "",
+                }
+            )
+    events.sort(key=lambda e: e["ts"])
+    return events
+
+
+def _fmt_mdy(d):
+    return pd.Timestamp(d).strftime("%m/%d/%Y")
+
+
+def _fmt_range(d0, d1):
+    d0, d1 = pd.Timestamp(d0).normalize(), pd.Timestamp(d1).normalize()
+    if d0 == d1:
+        return _fmt_mdy(d0)
+    return f"{_fmt_mdy(d0)} -- {_fmt_mdy(d1)}"
+
+
+def _interior_full_days(period_start, period_end):
+    """
+    Calendar days fully contained in (period_start, period_end).
+    Used to club multi-day off/on stretches between transition events.
+    """
+    start_day = pd.Timestamp(period_start).normalize()
+    end_day = pd.Timestamp(period_end).normalize()
+    if pd.Timestamp(period_start) > start_day:
+        first = start_day + pd.Timedelta(days=1)
+    else:
+        first = start_day
+    if pd.Timestamp(period_end) < end_day + pd.Timedelta(hours=23, minutes=59):
+        last = end_day - pd.Timedelta(days=1)
+    else:
+        last = end_day
+    if first > last:
+        return None, None
+    return first, last
+
+
+def _append_interior_row(rows, period_start, period_end, *, is_on):
+    first, last = _interior_full_days(period_start, period_end)
+    if first is None:
+        return
+    span_days = (last - first).days + 1
+    if is_on:
+        if span_days >= 2:
+            rows.append({"date": _fmt_range(first, last), "status": "on", "is_on": True})
+        elif span_days == 1:
+            rows.append({"date": _fmt_mdy(first), "status": "on", "is_on": True})
+    else:
+        if span_days >= 2:
+            rows.append({"date": _fmt_range(first, last), "status": "off", "is_on": False})
+        elif span_days == 1:
+            rows.append({"date": _fmt_mdy(first), "status": "off", "is_on": False})
+
+
+def _period_table_rows(events):
+    """
+    La Sal report style: transition rows with HHMM on/off; club multi-day off
+    (and continuing on) stretches between transitions.
+    """
+    rows = []
+    i = 0
+    while i < len(events):
+        ev = events[i]
+        if ev["kind"] == "on":
+            status = f"{ev['hhmm']} on"
+            if ev.get("note"):
+                status = f"{status} / {ev['note']}"
+            rows.append({"date": _fmt_mdy(ev["ts"]), "status": status, "is_on": True})
+            i += 1
+            if i < len(events) and events[i]["kind"] == "off":
+                off_ev = events[i]
+                _append_interior_row(rows, ev["ts"], off_ev["ts"], is_on=True)
+                rows.append(
+                    {
+                        "date": _fmt_mdy(off_ev["ts"]),
+                        "status": f"{off_ev['hhmm']} off",
+                        "is_on": False,
+                    }
+                )
+                i += 1
+                if i < len(events) and events[i]["kind"] == "on":
+                    _append_interior_row(rows, off_ev["ts"], events[i]["ts"], is_on=False)
+                    continue
+            continue
+        rows.append(
+            {
+                "date": _fmt_mdy(ev["ts"]),
+                "status": f"{ev['hhmm']} off",
+                "is_on": False,
+            }
+        )
+        i += 1
+        if i < len(events) and events[i]["kind"] == "on":
+            _append_interior_row(rows, ev["ts"], events[i]["ts"], is_on=False)
+    return rows
+
+
+def _rows_within_report_month(rows, month, year):
+    """Keep only rows that fall in the report calendar month; clip spanning ranges."""
+    if month is None or year is None:
+        return rows
+    import calendar as cal
+
+    month_start = pd.Timestamp(year, month, 1)
+    month_end = pd.Timestamp(year, month, cal.monthrange(year, month)[1])
+    kept = []
+    for row in rows:
+        date_col = row["date"]
+        if " -- " in date_col:
+            start_s, end_s = date_col.split(" -- ", 1)
+            start_ts = pd.Timestamp(datetime.strptime(start_s.strip(), "%m/%d/%Y"))
+            end_ts = pd.Timestamp(datetime.strptime(end_s.strip(), "%m/%d/%Y"))
+            if end_ts < month_start or start_ts > month_end:
+                continue
+            clip_start = max(start_ts, month_start)
+            clip_end = min(end_ts, month_end)
+            row = {**row, "date": _fmt_range(clip_start, clip_end)}
+        else:
+            day_ts = pd.Timestamp(datetime.strptime(date_col.strip(), "%m/%d/%Y"))
+            if day_ts < month_start or day_ts > month_end:
+                continue
+        kept.append(row)
+    return kept
+
+
 def generate_operations_table_latex(df, month, year):
     """
-    Generate LaTeX table in the format shown by user
-    Consolidates multiple entries for the same day
+    Generate LaTeX operations schedule: transition events plus clubbed off/on
+    stretches between them (La Sal monthly report format).
+    Uses the full event log for state, then keeps only report-month dates.
     """
-    # First, consolidate entries for the same day
-    daily_entries = {}
-    for idx, row in df.iterrows():
-        date = row['Date']
-        date_key = date.date()  # Use date as key
-        
-        if date_key not in daily_entries:
-            daily_entries[date_key] = {
-                'date': date,
-                'status_texts': [],
-                'is_on': False
-            }
-        
-        # Add status text for this entry
-        daily_entries[date_key]['status_texts'].append(row['Status_Text'])
-        # Only mark as operating if status text explicitly contains "on"
-        # (not just "off" which means it was on earlier but turned off)
-        status_lower = row['Status_Text'].lower()
-        if "on" in status_lower:
-            daily_entries[date_key]['is_on'] = True
-    
-    # Convert to list and sort by date
-    consolidated_rows = []
-    for date_key in sorted(daily_entries.keys()):
-        entry = daily_entries[date_key]
-        # Combine multiple status texts for the same day with " / "
-        combined_status = " / ".join(entry['status_texts'])
-        consolidated_rows.append({
-            'date': entry['date'],
-            'status': combined_status,
-            'is_on': entry['is_on']
-        })
-    
-    # Now group consecutive days with same status text
-    table_rows = []
-    current_range_start = None
-    current_range_end = None
-    current_status_text = None
-    current_is_on = None
-    
-    for row in consolidated_rows:
-        date = row['date']
-        status_text = row['status']
-        is_on = row['is_on']
-        
-        # Check if we can merge with previous row
-        if (current_range_start is not None and 
-            current_status_text == status_text):
-            # Extend range
-            current_range_end = date
-        else:
-            # Save previous range if exists
-            if current_range_start is not None:
-                if current_range_start == current_range_end:
-                    date_col = current_range_start.strftime("%m/%d/%Y")
-                else:
-                    date_col = f"{current_range_start.strftime('%m/%d/%Y')} -- {current_range_end.strftime('%m/%d/%Y')}"
-                
-                table_rows.append({
-                    'date': date_col,
-                    'status': current_status_text,
-                    'is_on': current_is_on
-                })
-            
-            # Start new range
-            current_range_start = date
-            current_range_end = date
-            current_status_text = status_text
-            current_is_on = is_on
-    
-    # Add last range
-    if current_range_start is not None:
-        if current_range_start == current_range_end:
-            date_col = current_range_start.strftime("%m/%d/%Y")
-        else:
-            date_col = f"{current_range_start.strftime('%m/%d/%Y')} -- {current_range_end.strftime('%m/%d/%Y')}"
-        
-        table_rows.append({
-            'date': date_col,
-            'status': current_status_text,
-            'is_on': current_is_on
-        })
-    
+    events = _chronological_events(df)
+    table_rows = _period_table_rows(events)
+    table_rows = _rows_within_report_month(table_rows, month, year)
+
     # Generate LaTeX
     latex_lines = []
     latex_lines.append("\\begin{longtable}{|p{5cm}|p{10cm}|}")
@@ -466,9 +544,37 @@ def generate_operations_table_latex(df, month, year):
         latex_lines.append(f"{date_col} & {status_col} \\\\")
         latex_lines.append("\\hline")
     
+    latex_lines.append("\\label{tab:operations_schedule}")
     latex_lines.append("\\end{longtable}")
-    
+
     return "\n".join(latex_lines)
+
+
+def _events_for_operations_table(df, month, year, *, lookback_days=30, lookahead_days=7):
+    """
+    Events for the LaTeX schedule table: report month plus nearby on/off rows
+    that define carry-over periods (same convention as prior monthly reports).
+    """
+    month_start = datetime(year, month, 1)
+    if month == 12:
+        month_end = datetime(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        month_end = datetime(year, month + 1, 1) - timedelta(days=1)
+    window_start = month_start - timedelta(days=lookback_days)
+    window_end = month_end + timedelta(days=lookahead_days)
+    out = df[(df["Date"] >= window_start) & (df["Date"] <= window_end)].copy()
+    # After report month: include only through the first OFF (closes carry-over ON).
+    post = out[out["Date"] > pd.Timestamp(month_end)].sort_values("Date")
+    if not post.empty:
+        cutoff = None
+        for _, row in post.iterrows():
+            st = str(row.get("Status_Text", "")).lower()
+            if re.search(r"\d{3,4}\s+off\b", st) or st.strip() == "off":
+                cutoff = row["Date"]
+                break
+        if cutoff is not None:
+            out = out[out["Date"] <= cutoff]
+    return out
 
 def _run(operations_input=None, month=None, year=None):
     """Parse operations, write CSV and LaTeX. Uses file if operations_input given else hardcoded data."""
@@ -517,17 +623,7 @@ def _run(operations_input=None, month=None, year=None):
     df_export.to_csv(csv_path, index=False)
     print(f"Saved operations CSV to {csv_path}")
 
-    # LaTeX schedule: only events in the report month (not carry-over shading rows)
-    if data_month is not None and data_year is not None:
-        month_start = datetime(data_year, data_month, 1)
-        if data_month == 12:
-            month_end = datetime(data_year + 1, 1, 1) - timedelta(days=1)
-        else:
-            month_end = datetime(data_year, data_month + 1, 1) - timedelta(days=1)
-        df_month = df[(df["Date"] >= month_start) & (df["Date"] <= month_end)].copy()
-    else:
-        df_month = df
-    latex_table = generate_operations_table_latex(df_month, data_month, data_year)
+    latex_table = generate_operations_table_latex(df, data_month, data_year)
     latex_path = BASE_DIR / "operations_table.tex"
     with open(latex_path, 'w') as f:
         f.write(latex_table)
