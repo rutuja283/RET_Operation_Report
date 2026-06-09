@@ -20,6 +20,19 @@ TREATMENT_STATIONS = [
     "Gold Basin"
 ]
 
+# Precipitation summary plot (report figure): La Sal treatment SNOTEL sites only
+PRECIP_SUMMARY_STATIONS = [
+    "La sal upper",
+    "Lasal Mtn lower",
+    "Gold Basin",
+]
+
+# SWE / precip-total pairs shown in the report (subset of all combinations)
+REPORT_STATION_PAIRS = [
+    ("La sal upper", "Buckboard Flat"),
+    ("Lasal Mtn lower", "Camp jackson"),
+]
+
 CONTROL_STATIONS = [
     "Camp jackson",
     "Buckboard Flat",

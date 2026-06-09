@@ -151,6 +151,158 @@ def _parse_operations_rows(data, default_year, default_month):
     return df
 
 
+def _excel_time_token(val):
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return None
+    s = str(val).strip()
+    if not s or s in ("---", "--", "-", "nan"):
+        return None
+    if s.isdigit():
+        return s.zfill(4)[-4:]
+    return s
+
+
+def parse_operations_from_excel(path, month=None, year=None):
+    """
+    Read WA25001-style operating record (.xlsx).
+    Row 0 is title; row 1 is header: Date, On Time, Off Time, ...
+    Returns the same DataFrame schema as parse_operations_from_file.
+    """
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Operations Excel not found: {path}")
+    raw = pd.read_excel(path, header=1)
+    raw = raw.rename(
+        columns={
+            raw.columns[0]: "Date",
+            raw.columns[1]: "On",
+            raw.columns[2]: "Off",
+        }
+    )
+    if len(raw.columns) > 5:
+        raw = raw.rename(columns={raw.columns[5]: "Comment"})
+    else:
+        raw["Comment"] = ""
+    raw["Date"] = pd.to_datetime(raw["Date"], errors="coerce")
+    raw = raw[raw["Date"].notna()].copy()
+
+    data = []
+    for _, row in raw.iterrows():
+        date_str = row["Date"].strftime("%m/%d/%Y")
+        on_t = _excel_time_token(row.get("On"))
+        off_t = _excel_time_token(row.get("Off"))
+        note = ""
+        if "Comment" in row.index and pd.notna(row.get("Comment")):
+            note = str(row["Comment"]).strip()
+        segs = []
+        if on_t:
+            segs.append(f"{on_t} on")
+        if off_t:
+            segs.append(f"{off_t} off")
+        if not segs:
+            continue
+        status = " / ".join(segs)
+        if note:
+            status = f"{status} / {note}"
+        data.append((date_str, status))
+
+    default_year = year if year is not None else int(raw["Date"].dt.year.iloc[0])
+    default_month = month if month is not None else int(raw["Date"].dt.month.iloc[0])
+    return _parse_operations_rows(data, default_year, default_month)
+
+
+def _sorted_on_off_events(df):
+    """Chronological (timestamp, 'on'|'off') from parsed operations rows."""
+    events = []
+    for _, row in df.iterrows():
+        d = pd.Timestamp(row["Date"]).normalize()
+        for col, kind in (("On_Time", "on"), ("Off_Time", "off")):
+            tok = row.get(col)
+            if tok is None or (isinstance(tok, float) and pd.isna(tok)):
+                continue
+            s = str(tok).strip()
+            if not s or s in ("---", "nan", "None"):
+                continue
+            if s.endswith(".0"):
+                s = s[:-2]
+            if s.isdigit():
+                s = s.zfill(4)[-4:]
+            events.append(
+                (
+                    d + pd.Timedelta(hours=int(s[:2]), minutes=int(s[2:])),
+                    kind,
+                )
+            )
+    events.sort(key=lambda x: x[0])
+    return events
+
+
+def build_on_intervals(events):
+    """Return list of (start_ts, end_ts|None) for each WETA ON interval."""
+    intervals = []
+    on_start = None
+    for ts, kind in events:
+        if kind == "on":
+            if on_start is None:
+                on_start = ts
+        elif on_start is not None:
+            intervals.append((on_start, ts))
+            on_start = None
+    if on_start is not None:
+        intervals.append((on_start, None))
+    return intervals
+
+
+def expand_operations_daily(df, month, year):
+    """
+    Expand event log into per-day rows for the report month, including carry-over
+    ON state from before the month (e.g. April on continuing into May).
+    """
+    import calendar as cal
+
+    events = _sorted_on_off_events(df)
+    month_start = pd.Timestamp(year, month, 1)
+    last_day = cal.monthrange(year, month)[1]
+    month_end = pd.Timestamp(year, month, last_day) + pd.Timedelta(hours=23, minutes=59)
+
+    rows = []
+    for start, end in build_on_intervals(events):
+        end_eff = end if end is not None else month_end + pd.Timedelta(days=365)
+        if end_eff < month_start or start > month_end:
+            continue
+        cur_day = max(start.normalize(), month_start)
+        while cur_day <= month_end.normalize():
+            day_start = cur_day
+            day_end = cur_day + pd.Timedelta(hours=23, minutes=59)
+            seg_start = max(start, day_start)
+            seg_end = min(end_eff, day_end)
+            if seg_start <= seg_end:
+                on_time = seg_start.strftime("%H%M")
+                off_time = seg_end.strftime("%H%M")
+                if seg_end >= day_end - pd.Timedelta(minutes=1):
+                    off_time = ""
+                if seg_start <= day_start + pd.Timedelta(minutes=1):
+                    on_time = ""
+                rows.append(
+                    {
+                        "Date": cur_day,
+                        "On_Time": on_time,
+                        "Off_Time": off_time,
+                        "Operating": True,
+                        "Status_Text": "on",
+                    }
+                )
+            cur_day += pd.Timedelta(days=1)
+
+    if not rows:
+        return pd.DataFrame(
+            columns=["Date", "On_Time", "Off_Time", "Operating", "Status_Text"]
+        )
+    out = pd.DataFrame(rows)
+    out = out.drop_duplicates(subset=["Date"], keep="first")
+    return out.sort_values("Date").reset_index(drop=True)
+
+
 def parse_operations_from_file(path, month, year):
     """
     Read operations data from a file. Expects one record per line:
@@ -324,7 +476,11 @@ def _run(operations_input=None, month=None, year=None):
         if month is None or year is None:
             print("Error: --month and --year are required when using --input")
             sys.exit(1)
-        df = parse_operations_from_file(operations_input, month, year)
+        src = Path(operations_input)
+        if src.suffix.lower() in (".xlsx", ".xls"):
+            df = parse_operations_from_excel(src, month=month, year=year)
+        else:
+            df = parse_operations_from_file(operations_input, month, year)
         data_month, data_year = month, year
     else:
         df = parse_operations_data()
@@ -335,16 +491,43 @@ def _run(operations_input=None, month=None, year=None):
             data_month, data_year = 1, 2026
 
     csv_path = CSV_DIR / "operations_schedule.csv"
-    df_export = df[['Date', 'Operating', 'On_Time', 'Off_Time']].copy()
-    df_export['Date'] = df_export['Date'].dt.strftime('%Y-%m-%d')
-    for col in ('On_Time', 'Off_Time'):
-        df_export[col] = df_export[col].apply(
-            lambda x: '' if x is None or (isinstance(x, float) and pd.isna(x)) else str(x).strip()
-        )
+    if data_month is not None and data_year is not None:
+        df_daily = expand_operations_daily(df, data_month, data_year)
+        if not df_daily.empty:
+            df_export = df_daily[["Date", "Operating", "On_Time", "Off_Time"]].copy()
+        else:
+            df_export = df[["Date", "Operating", "On_Time", "Off_Time"]].copy()
+    else:
+        df_export = df[["Date", "Operating", "On_Time", "Off_Time"]].copy()
+    df_export["Date"] = df_export["Date"].dt.strftime("%Y-%m-%d")
+    for col in ("On_Time", "Off_Time"):
+        def _fmt_time(x):
+            if x is None or (isinstance(x, float) and pd.isna(x)):
+                return ""
+            s = str(x).strip()
+            if not s or s.lower() in ("nan", "none"):
+                return ""
+            if s.endswith(".0"):
+                s = s[:-2]
+            if s.isdigit():
+                return s.zfill(4)[-4:]
+            return s
+
+        df_export[col] = df_export[col].apply(_fmt_time)
     df_export.to_csv(csv_path, index=False)
     print(f"Saved operations CSV to {csv_path}")
 
-    latex_table = generate_operations_table_latex(df, data_month, data_year)
+    # LaTeX schedule: only events in the report month (not carry-over shading rows)
+    if data_month is not None and data_year is not None:
+        month_start = datetime(data_year, data_month, 1)
+        if data_month == 12:
+            month_end = datetime(data_year + 1, 1, 1) - timedelta(days=1)
+        else:
+            month_end = datetime(data_year, data_month + 1, 1) - timedelta(days=1)
+        df_month = df[(df["Date"] >= month_start) & (df["Date"] <= month_end)].copy()
+    else:
+        df_month = df
+    latex_table = generate_operations_table_latex(df_month, data_month, data_year)
     latex_path = BASE_DIR / "operations_table.tex"
     with open(latex_path, 'w') as f:
         f.write(latex_table)

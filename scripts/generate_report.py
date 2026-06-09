@@ -14,14 +14,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (
     CSV_DIR, PLOTS_DIR, TREATMENT_STATIONS, CONTROL_STATIONS,
-    STATION_NAME_MAP
+    PRECIP_SUMMARY_STATIONS, REPORT_STATION_PAIRS,
 )
 from plot_generators import (
     plot_operations_schedule,
     plot_precipitation_summary,
     plot_snow_depth_boxplots,
     plot_month_precip_total_climatology_treatments,
-    plot_precip_accum_timeseries_vs_climatology,
     load_station_data,
     handle_snotel_cumulative,
 )
@@ -131,7 +130,7 @@ def generate_all_plots(month, year, operations_csv=None,
         stations_data = {}
         
         # Load all station data
-        all_stations = treatment_stations + control_stations
+        all_stations = PRECIP_SUMMARY_STATIONS
         for station_name in all_stations:
             result = load_station_data(station_name)
             if result is not None:
@@ -170,40 +169,33 @@ def generate_all_plots(month, year, operations_csv=None,
     except Exception as e:
         print(f"   Error: {e}")
     
-    # 3. Generate snow depth boxplots for ALL treatment-control combinations
-    print("\n3. Generating snow depth boxplots for all combinations...")
+    # 3. SWE boxplots for report pairs only
+    print("\n3. Generating SWE boxplots for report pairs...")
     try:
         plot_count = 0
-        for treatment in treatment_stations:
-            for control in control_stations:
-                print(f"   {treatment} vs {control}...")
-                try:
-                    result = plot_snow_depth_boxplots(
-                        treatment, control, month, year,
-                        highlight_month=month, highlight_year=year
-                    )
-                    if result:
-                        plot_count += 1
-                except Exception as e:
-                    print(f"      Error: {e}")
-        print(f"   Generated {plot_count} boxplot combinations")
+        for treatment, control in REPORT_STATION_PAIRS:
+            print(f"   {treatment} vs {control}...")
+            try:
+                result = plot_snow_depth_boxplots(
+                    treatment, control, month, year,
+                    highlight_month=month, highlight_year=year
+                )
+                if result:
+                    plot_count += 1
+            except Exception as e:
+                print(f"      Error: {e}")
+        print(f"   Generated {plot_count} boxplot pair(s)")
     except Exception as e:
         print(f"   Error: {e}")
 
-    # 4. Treatment-site calendar-month precip totals vs. prior-year climatology (one figure)
-    print("\n4. Generating treatment-site month precip climatology boxplots...")
+    # 4. Calendar-month precip totals vs. prior-year climatology
+    print("\n4. Generating month precip climatology boxplots...")
     try:
-        out = plot_month_precip_total_climatology_treatments(month, year)
+        out = plot_month_precip_total_climatology_treatments(
+            month, year, pairs=REPORT_STATION_PAIRS
+        )
         if out:
             print(f"   OK: {out}")
-    except Exception as e:
-        print(f"   Error: {e}")
-
-    print("\n5. Generating daily precip accumulation vs climatology (month window)...")
-    try:
-        out2 = plot_precip_accum_timeseries_vs_climatology(month, year)
-        if out2:
-            print(f"   OK: {out2}")
     except Exception as e:
         print(f"   Error: {e}")
     

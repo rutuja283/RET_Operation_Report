@@ -131,8 +131,8 @@
 % =========================
 \section{Control Page}
 
-\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_MAY2026\_v01.pdf\\
-\textbf{Revision:}\hspace{0.98em}      1.0
+\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_MAY2026\_v00a.pdf\\
+\textbf{Revision:}\hspace{0.98em}      0.0a
 
 \vspace{7pt}
 
@@ -154,11 +154,8 @@
 \rowcolor{headerbg}
 \textbf{Ver \#} & \textbf{Comments} & \textbf{Author} & \textbf{Date} \\
 \hline
-0.0c & Original Document Development -- Draft &
-Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 02/12/2026 \\
-\hline
-1.0 & Released for External Review &
-Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 02/14/2026 \\
+0.0a & Original Document Development -- Draft &
+Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 05/14/2026 \\
 \hline
 \end{tabular}
 \end{table}
@@ -174,31 +171,30 @@ Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 02/14/2026 \\
 This report provides a preliminary review of the Weather Enhancement Technology Array (WETA)
 installed by Rain Enhancement Technologies (RET) on the Flat Iron Mesa, outside Moab, Utah.
 WETA is a self-sufficient and ``off grid'' solution installed to provide enhancement of precipitation
-in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. the focus of this report is on the May 2026 operating period.
+in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. The focus of this report is on the May 2026 operating period.
 
 \subsection{Operational Summary}
 
 \begin{enumerate}
   \item This report covers 31 days from 05/01/2026 to 05/31/2026.
   \begin{enumerate}[label=\alph*.]
-    \item WETA operated on nine days in January 2026.
-    \item Precipitation was observed on seven of those days.
+    \item WETA operated on twenty-six days in May 2026.
+    \item Precipitation was observed on six days in May.
   \end{enumerate}
-  \item Like December 2025, January 2026 was a climatologically dry month.
-  \item Snow events on 1--2 January, 8--9 January, and 23--24 January replenished some of the snowpack that had degraded through December.
-  \item The evidence presented in this report supports the likelihood that precipitation was enhanced by WETA over the La Sal range.
-  \item Radiometrics radiometer data is being processed. Through consultation with Dr.\ Binod Pokharel, radiometer-derived quantities will be incorporated in forthcoming analyses as covariates.
-  \item Power issues related to the radiometer elaborated in the previous report were addressed in early February.
-  \item Addition of load shedding and backup generator for improved power reliability on site completed in early February.
+  \item Several events produced snow at the highest elevations in the La Sal (e.g., at the La Sal Upper SNOTEL at 9580~ft) but only minimal snow at lower altitude (e.g., at the La Sal Lower SNOTEL at 8780~ft).
+  \item Given the warming conditions, the large gradient in snowfall at high elevation, and the loss of snowpack at observation sites, this report will focus on liquid or liquid-equivalent precipitation.
+  \item Resolution of previously-reported power issues permitted longer continuous periods of operation, including a stretch beginning on 4/20 that continued into early May and a second stretch beginning on 5/16.
 \end{enumerate}
 
 \subsection{Actions and Improvements}
 
 \begin{enumerate}
-  \item January precipitation, snow pack depth, and snow-water equivalent were evaluated against observations (both current and historical) from the nearby Abajo Mountains. Expectations for untreated snowpack were deduced through analysis of snowpack in the La Sal Mountains compared to the Abajo in past years with similarly dry conditions.
-  \item Installation of further instrumentation in La Sal Ranges (planned Mar/Apr 2026).
-  \item Treatment probability maps are being calculated using HySPLIT simulations and estimated cell drift. A full event-based catalog of spatially-varying treatment probabilities will be presented in the next reporting cycle.
-  \item WETA operations will continue to target predicted precipitation events that are not considered adverse weather conditions or impacting snow pack.
+  \item This report features an analysis of precipitation using the same methods employed during the cold season, including a comparison between observations in the La Sal Mountains and the nearby Abajo mountains.
+  \item Installation of further instrumentation in La Sal Ranges is planned this summer.
+  \item Precipitation observed at additional existing gauge sites inside and outside of the target area will be incorporated into the next monthly report.
+  \item Methods of evaluation for warm-season precipitation are being tested presently, including incorporation of data from the Multi-Radar Multi-Sensor (MRMS) dataset.
+  \item WETA operations will continue to target predicted precipitation events that are not considered adverse weather conditions.
+  \item A method for enacting automatic shut-off during lightning events near WETA is currently in construction.
 \end{enumerate}
 
 \clearpage
@@ -208,10 +204,14 @@ in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. th
 % =========================
 \section{Operations Summary}
 
-Table \ref{tab:operations_schedule} details the operating schedule during the reporting period. Green highlighting indicates periods when WETA was operational.
-WETA was operated during periods when forecasts indicated any chance of precipitation over the target area, including marginal cases involving scattered light snow showers.
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\textwidth]{plots/202605_OperatingSchedule_Report.png}
+  \caption{WETA operating schedule during May 2026. Green shading indicates periods of operation.}
+  \label{fig:operations_schedule}
+\end{figure}
 
-\input{operations_table.tex}
+Resolution of prior power issues has enabled longer periods of continuous operation. WETA was operating for the majority of hours during the month of May 2026, including during periods that were dry or when there was only a marginal chance of precipitation.
 
 \clearpage
 
@@ -222,38 +222,35 @@ WETA was operated during periods when forecasts indicated any chance of precipit
 
 \subsection{Summary of Precipitation Events}
 
-January 2026 was another relatively dry month. Figure \ref{fig:precip} presents the daily time-series of precipitation measured at weather stations and SNOTEL in the region. Three main periods of snow occurred on 1--2 January, 8--9 January, and 23--24 January. WETA operated during these periods and had a likely impact on snowpack and snow water content.
+Figure \ref{fig:precip} presents the daily time-series of precipitation measured at SNOTEL sites in the region. The largest event in May occurred on 19 May; additional light precipitation was observed on 4, 8, 18, 20, and 24 May. WETA operated during several of these periods.
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=1.05\textwidth]{plots/202605_PrecipSummary_Report_v02.png}
-  \caption{Summary of daily accumulated precipitation at reporting weather and SNOTEL stations.}
+  \caption{Summary of daily accumulated precipitation at La sal Upper, La sal Lower, and Gold Basin SNOTEL sites. Green shading indicates WETA operating periods.}
   \label{fig:precip}
 \end{figure}
 
-
-
 \clearpage
 
-\subsection{Evaluation of Snow Pack and Snow-Water Content Enhancement}
+\subsection{Evaluation of Precipitation Enhancement}
 
-Snow pack enhancement was evident in the target area. The nearby Abajo mountains to the south of La Sal offer a means of establishing a control. We compared snow depth, snow-water equivalent, and accumulated precipitation at pairs of SNOTEL sites in the La Sal and Abajo ranges. Specifically, we compared observations from La sal Upper to Buckboard Flat, and La sal Lower to Camp Jackson. Figure \ref{fig:snow} presents snow-water equivalent content at these pairs of sites, respectively. The comparison presented in Figure \ref{fig:snow} reveals the following:
+Figure \ref{fig:snow} presents box-and-whisker plots summarizing the snow-water equivalent (SWE) across all cold-season months at SNOTEL sites in the La Sal target area and in Abajo Mountains control area. The evident loss of snowpack in March, April, and May obviates the need for continued snowpack analysis.
+
+Figure \ref{fig:precip_month_clim} presents the total accumulated precipitation observed in the storage gauges at the same SNOTEL locations that have been used to monitor snowpack. As in previous reports, the analysis focuses on pairs of highly-correlated sites in the La Sal and Abajo ranges (i.e., La Sal Upper and Buckboard Flat, La Sal Lower and Camp Jackson).
 
 \begin{enumerate}
-  \item The climatology of snow water content at La sal Upper is similar to that at Buckboard Flat. La sal Lower maintains, on average, a shallower snowpack with less water content than Camp Jackson.
-  \item All sites had much less water in snowpack than average from December 2025 through April 2026 (see red circles in Fig.\,\ref{fig:snow}).
-  \item Despite the dry conditions, the La Sal sites maintained a deeper snowpack with more water content than the Abajo sites. The differences were above the climatological mean.
+  \item The total precipitation at all sites in May 2026 (red circles in Figure \ref{fig:precip_month_clim}) was above the climatological mean.
+  \item The difference in total precipitation was higher than average at La Sal Upper compared to Buckboard Flat. However the difference was slightly lower than average at La Sal Lower compared to Camp Jackson.
+  \item The discrepancy is likely due to the small sample size of events and the higher degree of precipitation variance intrinsic to warm-season precipitation.
+  \item The noisy nature of warm-season precipitation underscores the need to incorporate additional observations over a longer period of record.
 \end{enumerate}
 
 \begin{figure}[h!]
   \centering
-  % Top row: La sal Upper, Buckboard Flat, Difference
   \includegraphics[width=\textwidth]{plots/202605_SWE_La_sal_upper_vs_Buckboard_Flat.png}
   \vspace{0.4cm}
-  
-  % Bottom row: La sal Lower, Camp Jackson, Difference
   \includegraphics[width=\textwidth]{plots/202605_SWE_Lasal_Mtn_lower_vs_Camp_jackson.png}
-  
   \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December, January, February, March, April, May snow water content (SWE) at (top left) La sal Upper, (top middle) Buckboard Flat, (top right) the difference, (bottom left) La sal Lower, (bottom middle) Camp Jackson, and (bottom right) the difference. Red circles indicate SWE for the respective months of the current water year; blue markers indicate climatological outliers.}
   \label{fig:snow}
 \end{figure}
@@ -261,34 +258,9 @@ Snow pack enhancement was evident in the target area. The nearby Abajo mountains
 \begin{figure}[h!]
   \centering
   \includegraphics[width=\textwidth]{plots/202605_PrecipMonthTotal_LaSalTreatments.png}
-  \caption{Calendar-month precipitation totals (inches; SNOTEL accumulation on the last day minus the first day of the month). Two rows: La sal Upper vs Buckboard Flat, then La sal Lower vs Camp Jackson. Each row has treatment (left), control (middle), and treatment minus control (right), matching the SWE boxplot layout. Boxes summarize prior years through 2025 (report year excluded); red markers indicate May 2026.}
+  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological May accumulated precipitation at (top left) La sal Upper, (top middle) Buckboard Flat, (top right) the difference, (bottom left) La sal Lower, (bottom middle) Camp Jackson, and (bottom right) the difference. Red circles indicate accumulated precipitation for the May month of the current water year.}
   \label{fig:precip_month_clim}
 \end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=\textwidth]{plots/202605_PrecipAccum_DailyVsClimatology.png}
-  \caption{May SNOTEL precipitation (inches): each plotted value is gauge accumulation on that date minus accumulation on 1~May, so the value on the last day of May matches the monthly total in Fig.~\ref{fig:precip_month_clim}. Solid = May 2026; dashed = climatological median by calendar day (2013--2025). Left: treatment vs control; right: treatment minus control.}
-  \label{fig:precip_accum_daily}
-\end{figure}
-
-\subsection{Establishment of Controls: Comparison of May 2026 to Analog Years}
-
-While Figure \ref{fig:precip_month_clim} compares report-month total accumulated precipitation at the two La Sal treatment sites to prior-year totals for that calendar month (report year excluded from each box), Figure \ref{fig:snow} indicates that enhancement was likely in snowpack. Quantitative estimation of the enhancement requires controls that are appropriate for the historically dry conditions that were observed in May 2026. We therefore evaluated the May 2026 observations against analogy years that were exceptionally dry. Using precipitation accumulation at the La Sal treatment SNOTEL sites (La sal upper and Lasal Mtn lower) as a basis for selection, the five driest years since 2013 were 2022, 2020, 2018, 2023, 2021. The differences between observations in the La Sal and Abajo ranges during these years were used to estimate ``expected differences''. Differences observed in 2026 that exceeded those expected differences are a measure of ``enhancement above expectation''. Table \ref{fig:enhancement} summarizes the expected enhancement values for May 2026 using this methodology. At La sal Upper, snow depth and snow-water content may show enhancement above the dry-year expectation; the comparison between La sal Lower and Camp Jackson is subject to more variability, most likely due to the lower altitude and proximity to snowline.
-
-\input{enhancement_table.tex}
-
-\subsection{Analysis of Radiometer Data}
-
-Radiometer-estimated liquid water content indicated significant differences in cloud liquid water over the La Sal range during the 23--24 January snow event. Fig.\,\ref{fig:radiometer} presents the difference in vertically-integrated liquid water between two azimuthal directions -- one to the northeast directed towards the La Sal range, and one directed vertically. Higher values over the La Sal range were evident during the snowfall period on the 23rd (e.g., see Fig.\,\ref{fig:precip}). RET has consulted with Dr.\ Binod Pokharel on best use of the radiometer data. Based on that discussion, derived radiometer quantities will be used as covariates to evaluate whether LWC or supercooled LWC may moderate the efficacy of enhancement.
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.55\textwidth]{Radiometer_VILWDiff_Dec2025.png}
-  \caption{Low-pass filtered difference in radiometer-estimated vertically-integrated liquid water between two azimuthal directions: northeast (treatment) minus zenith (control).}
-  \label{fig:radiometer}
-\end{figure}
-
 
 \clearpage
 
@@ -299,12 +271,12 @@ Radiometer-estimated liquid water content indicated significant differences in c
 \arrayrulecolor{tableborder}           % border color
 \setlength{\arrayrulewidth}{0.8pt}     % border thickness
 
+\begin{figure}[h!]
+\centering
 \begin{longtable}{|>{\centering\arraybackslash}p{3cm}|
                   >{\centering\arraybackslash}p{4.5cm}|
                   >{\RaggedRight\arraybackslash}p{5.5cm}|
                   >{\centering\arraybackslash}p{2.5cm}|}
-\caption*{} % hide caption title
-\label{tab:data_sources}\\
 \hline
 \rowcolor{headerbg}
 \makecell[c]{\textbf{Type of} \\ \textbf{Data Source}} &
@@ -351,5 +323,8 @@ Daily \\
 \hline
 
 \end{longtable}
+\caption{Data sources used in this report.}
+\label{fig:data_sources}
+\end{figure}
 
 \end{document}

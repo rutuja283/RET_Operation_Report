@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.patches import Patch
 from pathlib import Path
 from datetime import datetime, timedelta
 import calendar
@@ -91,63 +92,48 @@ def load_station_data(station_name, date_col=None, value_col=None):
 
 def plot_operations_schedule(operations_df, month, year, output_file=None):
     """
-    Generate operations schedule plot with green shading for operating periods
-    
-    Args:
-        operations_df: DataFrame with columns 'Date' (datetime) and 'Operating' (bool)
-        month: Month number (1-12)
-        year: Year
-        output_file: Output file path
+    Generate operations schedule plot with green shading for operating periods.
+    Uses expanded daily ON state (including carry-over from prior months).
     """
-    # Filter to the specified month
     month_start = datetime(year, month, 1)
     if month == 12:
         month_end = datetime(year + 1, 1, 1) - timedelta(days=1)
     else:
         month_end = datetime(year, month + 1, 1) - timedelta(days=1)
-    
-    month_df = operations_df[
-        (operations_df['Date'] >= month_start) & 
-        (operations_df['Date'] <= month_end)
-    ].copy()
-    
-    if month_df.empty:
+
+    daily = operations_df.copy()
+    daily["Date"] = pd.to_datetime(daily["Date"], errors="coerce")
+    daily = daily[(daily["Date"] >= month_start) & (daily["Date"] <= month_end)]
+    daily = daily[daily["Operating"] == True]
+    if daily.empty:
         print(f"Warning: No operations data for {month}/{year}")
         return None
-    
+
     fig, ax = plt.subplots(figsize=(14, 4))
-    
-    # Create date range for the month
-    dates = pd.date_range(start=month_start, end=month_end, freq='D')
-    
-    # Create operating status array
-    operating = []
+    dates = pd.date_range(start=month_start, end=month_end, freq="D")
+    operating_days = set(pd.to_datetime(daily["Date"]).dt.date)
+
     for date in dates:
-        day_data = month_df[month_df['Date'].dt.date == date.date()]
-        if not day_data.empty:
-            # If any part of the day was operating, mark as operating
-            operating.append(day_data['Operating'].any() if 'Operating' in day_data.columns else False)
-        else:
-            operating.append(False)
-    
-    # Plot green shading for operating periods
-    for i, (date, is_operating) in enumerate(zip(dates, operating)):
-        if is_operating:
-            ax.axvspan(date - timedelta(hours=12), date + timedelta(hours=12), 
-                      color='green', alpha=0.3, zorder=0)
-    
-    # Formatting
+        if date.date() in operating_days:
+            ax.axvspan(
+                date - timedelta(hours=12),
+                date + timedelta(hours=12),
+                color="#2ecc71",
+                alpha=0.45,
+                edgecolor="#145a32",
+                linewidth=0.6,
+                zorder=0,
+            )
+
     ax.set_xlim(dates[0] - timedelta(days=0.5), dates[-1] + timedelta(days=0.5))
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Operating Status')
-    ax.set_title(f'WETA Operating Schedule - {calendar.month_name[month]} {year}')
-    ax.grid(True, alpha=0.3)
-    
-    # Format x-axis dates
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates)//10)))
+    ax.set_xlabel("Date")
+    ax.set_ylabel("")
+    ax.set_yticks([])
+    ax.set_title(f"WETA Operating Schedule — {calendar.month_name[month]} {year}")
+    ax.grid(True, alpha=0.3, axis="x")
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 10)))
     plt.xticks(rotation=45)
-    
     plt.tight_layout()
     
     if output_file is None:
@@ -165,8 +151,10 @@ def _hhmm_token_to_day_fraction(token):
     if token is None:
         return None
     s = str(token).strip()
-    if not s or s in ('---', '--', '-') or s.lower() in ('nan', 'none'):
+    if not s or s in ("---", "--", "-") or s.lower() in ("nan", "none"):
         return None
+    if s.endswith(".0"):
+        s = s[:-2]
     if not s.isdigit():
         return None
     s = s.zfill(4)[-4:]
@@ -203,6 +191,7 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     Bar chart of daily precipitation (from Precipitation Accumulation) in inches,
     with green vertical bands for WETA **ON** periods (sub-day when ON/OFF times are known).
     One bar per station per day. Uses numeric x (0..n_days) so bars and WETA bands align.
+    Legend includes a green WETA operating swatch.
     """
     month_start = datetime(year, month, 1)
     if month == 12:
@@ -217,13 +206,16 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     # Use numeric x so bars and axvspan share the same scale
     ax.set_xlim(-0.5, n_days - 0.5)
     
-    # Green bands: only the portion of each day when WETA is ON (from schedule times when available)
-    if not operations_df.empty and 'Date' in operations_df.columns:
-        ops = operations_df.copy()
-        ops['Date'] = pd.to_datetime(ops['Date'], errors='coerce').dt.normalize()
-        month_ops = ops[(ops['Date'] >= month_start) & (ops['Date'] <= month_end)]
+    weta_highlighted = False
+    # Green bands: daily ON windows (CSV includes carry-over from prior month)
+    if not operations_df.empty and "Date" in operations_df.columns:
+        month_ops = operations_df.copy()
+        month_ops["Date"] = pd.to_datetime(month_ops["Date"], errors="coerce").dt.normalize()
+        month_ops = month_ops[
+            (month_ops["Date"] >= month_start) & (month_ops["Date"] <= month_end)
+        ]
         if not month_ops.empty:
-            on_rows = month_ops[month_ops['Operating'] == True]
+            on_rows = month_ops[month_ops["Operating"] == True]
             n_spans = 0
             for _, row in on_rows.iterrows():
                 d = row['Date'].date()
@@ -252,6 +244,7 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
                         zorder=0,
                     )
                     n_spans += 1
+                    weta_highlighted = True
             print(f"   WETA ON highlights: {len(on_rows)} day(s), {n_spans} time window(s)")
     
     # Bar chart: one bar per station per day (x = day index 0..n_days-1)
@@ -275,8 +268,17 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
             if d_date in by_date.index:
                 precip_per_day[j] = float(by_date.loc[d_date])
         offset = (i - (n_stations - 1) / 2) * width
-        ax.bar(day_axis + offset, precip_per_day, width, label=station_name,
-               color=colors[i], edgecolor='gray', linewidth=0.3, zorder=1)
+        label = STATION_DISPLAY_NAMES.get(station_name, station_name)
+        ax.bar(
+            day_axis + offset,
+            precip_per_day,
+            width,
+            label=label,
+            color=colors[i],
+            edgecolor="gray",
+            linewidth=0.3,
+            zorder=1,
+        )
     
     # Show x-ticks at readable interval (every 2–3 days) so labels don't overlap
     tick_step = max(1, (n_days + 6) // 10)
@@ -287,8 +289,14 @@ def plot_precipitation_summary(stations_data, operations_df, month, year, output
     ax.set_xticklabels([f"{dates[j].day}-{dates[j].strftime('%b')}" for j in tick_indices], rotation=45, ha='right')
     ax.set_xlabel('Date')
     ax.set_ylabel('Precip (in)')
-    ax.set_title(f'{calendar.month_name[month]} Precipitation Summary')
-    ax.legend(loc='upper right', ncol=2, framealpha=0.9)
+    ax.set_title(f"{calendar.month_name[month]} Precipitation Summary")
+    handles, labels = ax.get_legend_handles_labels()
+    if weta_highlighted:
+        handles.append(
+            Patch(facecolor="#2ecc71", edgecolor="#145a32", alpha=0.45, label="WETA operating")
+        )
+        labels.append("WETA operating")
+    ax.legend(handles, labels, loc="upper right", ncol=2, framealpha=0.9)
     ax.set_ylim(0, None)
     ax.grid(True, alpha=0.3, axis='y')
     plt.tight_layout()
