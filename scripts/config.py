@@ -31,6 +31,7 @@ PRECIP_SUMMARY_STATIONS = [
 REPORT_STATION_PAIRS = [
     ("La sal upper", "Buckboard Flat"),
     ("Lasal Mtn lower", "Camp jackson"),
+    ("Gold Basin", "Buckboard Flat"),
 ]
 
 CONTROL_STATIONS = [
