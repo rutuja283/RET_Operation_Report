@@ -28,6 +28,7 @@ PRECIP_SUMMARY_STATIONS = [
 ]
 
 # SWE / precip-total pairs shown in the report (subset of all combinations)
+# Primary Abajo controls per warm-season evaluation (July PDF / Aug report)
 REPORT_STATION_PAIRS = [
     ("La sal upper", "Buckboard Flat"),
     ("Lasal Mtn lower", "Camp jackson"),
@@ -37,7 +38,6 @@ REPORT_STATION_PAIRS = [
 CONTROL_STATIONS = [
     "Camp jackson",
     "Buckboard Flat",
-    "Elke Ridge"
 ]
 
 # Station name mappings (PDF filename -> standardized name)

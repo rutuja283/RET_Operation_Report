@@ -1,9 +1,6 @@
 % =========================================================
-% La Sal Ops Report (Feb 2026) - Concise RET branded template
-% - Cover imported from PDF
-% - RET logo centered on every page except cover
-% - No chapters (uses section headings like Word)
-% - titlesec formatting for headings
+% La Sal Ops Report (Aug 2026) — July operating period
+% Structure aligned with La_Sal_Operations_Report_July_v00a
 % =========================================================
 \documentclass[11pt]{article}
 
@@ -20,65 +17,49 @@
 \usepackage{enumitem}
 \usepackage{pdfpages}
 \usepackage{fancyhdr}
-\usepackage[table]{xcolor} % Make sure you include this in the preamble
+\usepackage[table]{xcolor}
 \usepackage{titlesec}
-\usepackage{xcolor}
-\usepackage{colortbl}  % For row coloring and cell borders
-\usepackage{subcaption}  % For subfigures
-\usepackage{makecell}            % for nicer line breaks in headers
-\usepackage{ragged2e}            % for text alignment inside cells
-% -------------------------
-% Hyperref setup - TOC in black, other links in blue
-% -------------------------
+\usepackage{colortbl}
+\usepackage{subcaption}
+\usepackage{makecell}
+\usepackage{ragged2e}
+
 \hypersetup{
   colorlinks=true,
-  linkcolor=black,      % TOC links in black
+  linkcolor=black,
   urlcolor=blue,
   citecolor=blue
 }
 
-% -------------------------
-% Concise spacing controls
-% -------------------------
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{3pt}          % tighter than before
-\linespread{1.08}                  % tighter than 1.5x; closer to Word corporate reports
+\setlength{\parskip}{3pt}
+\linespread{1.08}
 
-% Tighter lists everywhere
 \setlist[itemize]{topsep=3pt, itemsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=*}
 \setlist[enumerate]{topsep=3pt, itemsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=*}
 
-% -------------------------
-% Section numbering like Word: "1  Control Page"
-% -------------------------
 \setcounter{secnumdepth}{2}
 \setcounter{tocdepth}{2}
 
 \renewcommand\thesection{\arabic{section}}
 \renewcommand\thesubsection{\thesection.\arabic{subsection}}
 
-% Section title format: "1  Executive Summary" with italic title (Word-like)
 \titleformat{\section}
-  {\large\bfseries}         % number style
-  {\thesection}             % label
-  {1em}                     % spacing between number and title
-  {\itshape}                % title style (italic like your screenshot)
+  {\large\bfseries}
+  {\thesection}
+  {1em}
+  {\itshape}
 
-% Subsection: "2.1  Operational Summary"
 \titleformat{\subsection}
   {\normalsize\bfseries}
   {\thesubsection}
   {1em}
   {\bfseries}
 
-% Tighten vertical whitespace around headings (concise)
 \titlespacing*{\section}{0pt}{8pt}{6pt}
 \titlespacing*{\subsection}{0pt}{6pt}{4pt}
 
-% =========================================================
-% Header / Footer — centered RET logo on ALL pages after cover
-% =========================================================
-\setlength{\headheight}{70pt}  % larger header space for bigger logo
+\setlength{\headheight}{70pt}
 \setlength{\headsep}{16pt}
 \renewcommand{\headrulewidth}{0pt}
 
@@ -91,7 +72,6 @@
 \fancyhead[C]{\RETHeaderLogo}
 \fancyfoot[C]{\thepage}
 
-% IMPORTANT: some pages may switch to plain; force same header there too
 \fancypagestyle{plain}{%
   \fancyhf{}
   \renewcommand{\headrulewidth}{0pt}
@@ -99,26 +79,18 @@
   \fancyfoot[C]{\thepage}
 }
 
-% =========================================================
-% Table formatting: cell borders and row highlighting
-% =========================================================
-% Define colors for row highlighting
-\definecolor{greenhighlight}{RGB}{232, 245, 225}  % Light green for WETA on rows
-\definecolor{tableborder}{RGB}{150, 150, 150}     % Darker gray for better cell borders
-\definecolor{headerbg}{RGB}{230, 230, 230}        % Light gray for header background
+\definecolor{greenhighlight}{RGB}{232, 245, 225}
+\definecolor{tableborder}{RGB}{150, 150, 150}
+\definecolor{headerbg}{RGB}{230, 230, 230}
 
-% =========================================================
 \begin{document}
 
-% =========================================================
-% Cover Page (Imported from PDF – NO header/footer)
-% =========================================================
+% Cover (replace with August cover PDF when available)
 \includepdf[
   pages=1,
   pagecommand={\thispagestyle{empty}}
 ]{coverpage_june.pdf}
 
-% Reset numbering after cover
 \pagenumbering{arabic}
 \setcounter{page}{1}
 \pagestyle{fancy}
@@ -131,23 +103,21 @@
 % =========================
 \section{Control Page}
 
-\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_JUL2026\_v00a.pdf\\
-\textbf{Revision:}\hspace{0.98em}      0.0a
+\textbf{Document:}\hspace{0.8em}PI25003\_La\_Sal\_OpsReport\_AUG2026\_v00a.pdf\\
+\textbf{Revision:}\hspace{0.98em}0.0a
 
 \vspace{7pt}
 
 \textbf{Revision History}
 
-% Improved table formatting with better borders and spacing
 \renewcommand{\arraystretch}{1.3}
 \arrayrulecolor{tableborder}
 \setlength{\arrayrulewidth}{0.8pt}
 
 \begin{table}[h!]
 \centering
-\renewcommand{\arraystretch}{1.2} % Adds a bit of vertical padding
-% \usepackage[table]{xcolor} % Make sure you include this in the preamble
-\definecolor{headerbg}{gray}{0.85} % Light gray header background
+\renewcommand{\arraystretch}{1.2}
+\definecolor{headerbg}{gray}{0.85}
 
 \begin{tabular}{|p{1.2cm}|p{7.2cm}|p{4.1cm}|p{2.0cm}|}
 \hline
@@ -155,11 +125,10 @@
 \textbf{Ver \#} & \textbf{Comments} & \textbf{Author} & \textbf{Date} \\
 \hline
 0.0a & Original Document Development -- Draft &
-Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 07/11/2026 \\
+Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 08/26/2026 \\
 \hline
 \end{tabular}
 \end{table}
-
 
 \clearpage
 
@@ -170,31 +139,49 @@ Jeffrey Chagnon; Rutuja Dongre; Scott Morris & 07/11/2026 \\
 
 This report provides a preliminary review of the Weather Enhancement Technology Array (WETA)
 installed by Rain Enhancement Technologies (RET) on the Flat Iron Mesa, outside Moab, Utah.
-WETA is a self-sufficient and ``off grid'' solution installed to provide enhancement of precipitation
-in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. The focus of this report is on the June 2026 operating period.
+WETA is a self-sufficient and ``off grid'' solution installed to provide enhancement of precipitation,
+including snowfall during the cold season and rainfall during the warm season. For this report, the
+warm season refers to the April--July operating period, with the present report focused specifically
+on July 2026.
 
 \subsection{Operational Summary}
 
 \begin{enumerate}
-  \item This report covers 30 days from 06/01/2026 to 06/30/2026.
+  \item This report covers 31 days from 07/01/2026 to 07/31/2026.
   \begin{enumerate}[label=\alph*.]
-    \item WETA operated on sixteen days in June 2026.
-    \item Precipitation was observed on one day in June.
+    \item WETA operated on twenty-four days in July 2026.
+    \item Precipitation was observed on eighteen days in July at one or more La Sal SNOTEL sites.
   \end{enumerate}
-  \item Several events produced snow at the highest elevations in the La Sal (e.g., at the La Sal Upper SNOTEL at 9580~ft) but only minimal snow at lower altitude (e.g., at the La Sal Lower SNOTEL at 8780~ft).
-  \item Given the warming conditions, the large gradient in snowfall at high elevation, and the loss of snowpack at observation sites, this report will focus on liquid or liquid-equivalent precipitation.
-  \item Resolution of previously-reported power issues permitted longer continuous periods of operation, including stretches in early, mid-, and late June.
+  \item July 2026 was substantially wetter than June across the region. Positive target-minus-control
+  differences were obtained at La Sal Upper and Gold Basin relative to Buckboard Flat, while
+  La Sal Lower was slightly below Camp Jackson. Sample size and convective spatial variability
+  still limit definitive attribution for a single month.
+  \item Given the absence of snowpack at the observation sites, this report focuses on liquid
+  precipitation during the July operating period.
+  \item The longest continuous operating period for WETA within July was 11 days, between
+  07/11/2026 and 07/21/2026. A later continuous period beginning 07/24/2026 extended into
+  early August.
 \end{enumerate}
 
 \subsection{Actions and Improvements}
 
 \begin{enumerate}
-  \item This report features an analysis of precipitation using the same methods employed during the cold season, including a comparison between observations in the La Sal Mountains and the nearby Abajo mountains.
-  \item Installation of further instrumentation in La Sal Ranges is planned this summer.
-  \item Precipitation observed at additional existing gauge sites inside and outside of the target area will be incorporated into the next monthly report.
-  \item Methods of evaluation for warm-season precipitation are being tested presently, including incorporation of data from the Multi-Radar Multi-Sensor (MRMS) dataset.
-  \item WETA operations will continue to target predicted precipitation events that are not considered adverse weather conditions.
-  \item A method for enacting automatic shut-off during lightning events near WETA is currently in construction.
+  \item This report evaluates warm-season precipitation using methods consistent with those applied
+  during the cold season, including comparisons between observations in the La Sal Mountains
+  and selected reference stations from the NRCS SNOTEL network. Candidate stations were
+  assessed based on historical correlation with the La Sal target sites, geographic relationship
+  to the treatment area, elevation and climatic setting, and consistency of the available
+  precipitation records. Primary controls are Abajo Mountains SNOTEL pairs
+  (Buckboard Flat and Camp Jackson).
+  \item Installation of additional instrumentation in the La Sal Mountains is planned for this summer,
+  pending the necessary USDA Forest Service permitting and approvals.
+  \item Methods of evaluation for warm-season precipitation are being tested presently, including
+  incorporation of data from the Multi-Radar Multi-Sensor (MRMS) dataset and secondary
+  consistency checks against NWS Cooperative Observer Program (COOP) stations.
+  \item WETA operations will continue to target predicted precipitation events that are not considered
+  adverse weather conditions.
+  \item An automatic shut-off capability for lightning events occurring within a 6-mile radius of WETA
+  is currently under development as a protection system for the WETA.
 \end{enumerate}
 
 \clearpage
@@ -204,17 +191,17 @@ in year-round operations (snow and rainfall) over the La Sal Mountain Ranges. Th
 % =========================
 \section{Operations Summary}
 
-Figure \ref{fig:operations_schedule} details the operating schedule during the reporting period. Green highlighting indicates periods when WETA was operational.
-WETA was operated during periods when forecasts indicated any chance of precipitation over the target area, including marginal cases involving scattered light snow showers.
+Figure~\ref{fig:operations_schedule} details the operating schedule during the reporting period.
+Green highlighting indicates periods when WETA was operational. WETA was operated during
+periods when forecasts indicated any chance of precipitation over the target area, including
+marginal cases involving scattered light showers.
 
 \begin{figure}[h!]
   \centering
   \input{operations_table.tex}
-  \caption{WETA operating schedule during June 2026. Green highlighting indicates periods of operation.}
+  \caption{WETA operating schedule during July 2026. Green highlighting indicates periods of operation.}
   \label{fig:operations_schedule}
 \end{figure}
-
-Resolution of prior power issues has enabled longer periods of continuous operation. WETA was operated during multiple periods in June 2026, including during intervals that were dry or when there was only a marginal chance of precipitation.
 
 \clearpage
 
@@ -225,12 +212,15 @@ Resolution of prior power issues has enabled longer periods of continuous operat
 
 \subsection{Summary of Precipitation Events}
 
-Figure \ref{fig:precip} presents the daily time-series of precipitation measured at SNOTEL sites in the region. Light precipitation was observed on 25 June. WETA operated during several early- and mid-month periods but not during the late-month precipitation event.
+Figure~\ref{fig:precip} presents the daily time-series of precipitation measured at SNOTEL sites in
+the region. Multiple precipitation events occurred through mid- and late July, with the largest
+daily totals near 19 July. WETA was operating during most of these events.
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=1.05\textwidth]{plots/202606_PrecipSummary_Report_v02.png}
-  \caption{Summary of daily accumulated precipitation at La sal Upper, La sal Lower, and Gold Basin SNOTEL sites. Green shading indicates WETA operating periods.}
+  \includegraphics[width=1.05\textwidth]{plots/202607_PrecipSummary_Report_v02.png}
+  \caption{Summary of daily accumulated precipitation at La Sal Upper, La Sal Lower, and Gold
+  Basin SNOTEL sites. Green shading indicates WETA operating periods.}
   \label{fig:precip}
 \end{figure}
 
@@ -238,41 +228,114 @@ Figure \ref{fig:precip} presents the daily time-series of precipitation measured
 
 \subsection{Evaluation of Precipitation Enhancement}
 
-Figure \ref{fig:snow} presents box-and-whisker plots summarizing the snow-water equivalent (SWE) across all cold-season months at SNOTEL sites in the La Sal target area and in Abajo Mountains control area. The evident loss of snowpack in March, April, May, and June obviates the need for continued snowpack analysis.
+Enhancement is evaluated by comparing accumulated precipitation at target sites in the La Sal
+Mountains against control sites outside the treatment area, using records from the SNOTEL
+locations. SNOTEL precipitation is measured with an all-season storage gauge, which reports
+year-round and is therefore suitable for warm-season rainfall analysis. Candidate control sites were
+drawn from the NRCS SNOTEL network and assessed on three joint criteria: correlation of
+April--July monthly precipitation totals with the target, consistency of instrumentation with the
+target gauges, and geographic position relative to the treatment area.
 
-Figure \ref{fig:precip_month_clim} presents the total accumulated precipitation observed in the storage gauges at the same SNOTEL locations that have been used to monitor snowpack. As in previous reports, the analysis focuses on pairs of highly-correlated sites in the La Sal and Abajo ranges (i.e., La Sal Upper and Buckboard Flat, La Sal Lower and Camp Jackson, and Gold Basin and Buckboard Flat).
+The Abajo Mountains provide the primary controls. Buckboard Flat and Camp Jackson are among
+the most strongly correlated candidates for every La Sal target over the warm season, employ the
+same all-season storage-gauge instrumentation as the target sites, and lie south-southwest of the
+target. On this basis the analysis adopts three pairs: La Sal Upper with Buckboard Flat, La Sal
+Lower with Camp Jackson, and Gold Basin with Buckboard Flat. These are the pairs presented in
+Figures~\ref{fig:precip_month_clim} and~\ref{fig:precip_season}.
+
+Turning to the reporting period, the following observations are made.
 
 \begin{enumerate}
-  \item The total precipitation at all sites in June 2026 (red circles in Figure \ref{fig:precip_month_clim}) was below the climatological mean.
-  \item June was a dry month with limited precipitation events, constraining enhancement evaluation for this reporting period.
-  \item The discrepancy is likely due to the small sample size of events and the higher degree of precipitation variance intrinsic to warm-season precipitation.
-  \item The noisy nature of warm-season precipitation underscores the need to incorporate additional observations over a longer period of record.
+  \item July 2026 was wetter than climatology at all three La Sal target sites. Calendar-month totals
+  were approximately 4.7~in at La Sal Upper, 3.8~in at La Sal Lower, and 4.3~in at Gold Basin,
+  each above the corresponding July climatological mean.
+  \item The target-minus-control differences for July 2026 were positive at La Sal Upper relative to
+  Buckboard Flat ($+$1.1~in) and at Gold Basin relative to Buckboard Flat ($+$0.7~in), and
+  negative at La Sal Lower relative to Camp Jackson ($-$0.9~in).
+  \item Relative to the climatological mean of the difference distribution, the La Sal Upper and Gold
+  Basin pairs sit well above their historical July means (which are slightly negative), while the
+  La Sal Lower pair remains within the interannual spread. No claim of enhancement is made
+  for July in isolation, but the Upper and Gold Basin contrasts are directionally consistent with
+  a positive treatment-minus-control anomaly.
+  \item Viewed across the warm season (Figure~\ref{fig:precip_season}), absolute precipitation and
+  target--control differences vary month to month. April--July 2026 cumulative totals remain
+  above the Abajo controls at La Sal Upper and Gold Basin, while La Sal Lower is near Camp
+  Jackson.
+  \item Cumulative analog-year estimates for July and for April--July 2026 are summarized in
+  Table~\ref{tab:enhancement}. For La Sal Upper (Buckboard Flat control), the July analog-year
+  enhancement is $+1.52$~in and the April--July seasonal analog-year enhancement is
+  approximately $+3.4$~in. La Sal Lower remains near zero to slightly negative on the same
+  basis. These central estimates are positive at the Upper site but rest on a short warm-season
+  sample and should be treated as preliminary.
 \end{enumerate}
 
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=\textwidth]{plots/202606_SWE_La_sal_upper_vs_Buckboard_Flat.png}
-  \vspace{0.4cm}
-  \includegraphics[width=\textwidth]{plots/202606_SWE_Lasal_Mtn_lower_vs_Camp_jackson.png}
-  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological December, January, February, March, April, May, June snow water content (SWE) at (top left) La sal Upper, (top middle) Buckboard Flat, (top right) the difference, (bottom left) La sal Lower, (bottom middle) Camp Jackson, and (bottom right) the difference. Red circles indicate SWE for the respective months of the current water year; blue markers indicate climatological outliers.}
-  \label{fig:snow}
-\end{figure}
+Three factors currently limit the sensitivity of this evaluation. First, the sample is short: the
+longest paired record available for a primary pair is on the order of a decade of warm-season
+years, and Gold Basin has fewer overlapping years. Second, warm-season precipitation in this
+region is dominated by convective events whose spatial scale is smaller than the
+target--control separation, so a single control gauge samples the storm field only imperfectly.
+Third, month-to-month convective placement can reverse the sign of a single-pair difference even
+when regional totals are elevated.
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=\textwidth]{plots/202606_PrecipMonthTotal_LaSalTreatments.png}
-  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological June accumulated precipitation at (top row, left to right) La sal Upper, Buckboard Flat, and the difference; (middle row) La sal Lower, Camp Jackson, and the difference; and (bottom row) Gold Basin, Buckboard Flat, and the difference. Red circles indicate accumulated precipitation for the June month of the current water year.}
+  \includegraphics[width=\textwidth]{plots/202607_PrecipMonthTotal_LaSalTreatments.png}
+  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological July accumulated
+  precipitation at (top row, left to right) La Sal Upper, Buckboard Flat, and the difference;
+  (middle row) La Sal Lower, Camp Jackson, and the difference; and (bottom row) Gold Basin,
+  Buckboard Flat, and the difference. Red circles indicate accumulated precipitation for July of
+  the current water year.}
   \label{fig:precip_month_clim}
 \end{figure}
 
 \clearpage
 
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\textwidth]{plots/202607_PrecipMonthTotal_AprJul_LaSalTreatments.png}
+  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological April, May, June,
+  and July accumulated precipitation at La Sal Upper, Buckboard Flat, and the difference;
+  La Sal Lower, Camp Jackson, and the difference; and Gold Basin, Buckboard Flat, and the
+  difference. Red circles indicate values for the 2026 warm season.}
+  \label{fig:precip_season}
+\end{figure}
+
+\begin{table}[h!]
+  \centering
+  \renewcommand{\arraystretch}{1.25}
+  \arrayrulecolor{tableborder}
+  \begin{tabular}{|l|l|c|l|}
+  \hline
+  \rowcolor{headerbg}
+  \textbf{Method} & \textbf{Period} & \textbf{Enhancement (in)} & \textbf{Notes} \\
+  \hline
+  Analog years & July 2026 & $+1.52$ & La Sal Upper vs Buckboard Flat \\
+  \hline
+  Analog years & July 2026 & $-0.88$ & La Sal Lower vs Camp Jackson \\
+  \hline
+  Analog years & April--July 2026 & $+3.42$ & La Sal Upper vs Buckboard Flat \\
+  \hline
+  Analog years & April--July 2026 & $-0.30$ & La Sal Lower vs Camp Jackson \\
+  \hline
+  \end{tabular}
+  \caption{Estimated precipitation enhancement in July and the April--July 2026 warm season at
+  La Sal sites using the analog-years method (five driest Julys / warm seasons since 2013 at the
+  La Sal treatment gauges). Positive central estimates at La Sal Upper are preliminary given the
+  short warm-season sample and convective spatial variability.}
+  \label{tab:enhancement}
+\end{table}
+
+\clearpage
+
+% =========================
+% 5 References
+% =========================
 \section{References}
 \subsection{Data Sources}
 
-\renewcommand{\arraystretch}{1.3}      % row height
-\arrayrulecolor{tableborder}           % border color
-\setlength{\arrayrulewidth}{0.8pt}     % border thickness
+\renewcommand{\arraystretch}{1.3}
+\arrayrulecolor{tableborder}
+\setlength{\arrayrulewidth}{0.8pt}
 
 \begin{figure}[h!]
 \centering
@@ -319,9 +382,24 @@ Weather variables such as precipitation, wind speed, wind direction, temperature
 Hourly \\
 \hline
 
-SNOTEL &
-Gold Basin, UT (1304); La sal upper, UT (572); La sal Lower, UT (1215); Buckboard Flat, UT (1153); Camp Jackson, UT (383) &
-Snow / water equivalent monitoring &
+SNOTEL
+(treatment sites) &
+Gold Basin, UT (1304); La Sal Upper, UT (572); La Sal Lower, UT (1215) &
+Accumulated precipitation (all-season storage gauge) and snow water equivalent &
+Daily \\
+\hline
+
+SNOTEL
+(control sites) &
+Buckboard Flat, UT (1153); Camp Jackson, UT (383) &
+Accumulated precipitation and snow water equivalent; Abajo Mountains control pairs &
+Daily \\
+\hline
+
+NWS COOP
+(secondary check) &
+Arches NP HQS, UT (USC00420336); Blanding, UT (USC00420738) &
+Manually observed daily precipitation; low-elevation consistency check (supporting) &
 Daily \\
 \hline
 

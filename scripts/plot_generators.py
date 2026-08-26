@@ -28,6 +28,7 @@ STATION_DISPLAY_NAMES = {
     "Buckboard Flat": "Buckboard Flat",
     "Elke Ridge": "Elke Ridge",
     "Gold Basin": "Gold Basin",
+    "Harms Way": "Harms Way",
 }
 
 
