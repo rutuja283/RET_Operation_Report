@@ -779,6 +779,172 @@ def plot_month_precip_total_climatology_treatments(
     return output_file
 
 
+def plot_seasonal_precip_total_climatology(
+    months,
+    year,
+    pairs=None,
+    climatology_start_year=2013,
+    output_file=None,
+):
+    """
+    Multi-month boxplots (one row per pair): treatment, control, and difference
+    across a list of calendar months. Boxes = prior years; red markers = report year.
+    """
+    if pairs is None:
+        pairs = [
+            ("La sal upper", "Buckboard Flat"),
+            ("Lasal Mtn lower", "Camp jackson"),
+            ("Gold Basin", "Buckboard Flat"),
+        ]
+
+    def style_boxplot(bp):
+        for box in bp["boxes"]:
+            box.set_facecolor("#c6dbef")
+            box.set_edgecolor("#1f77b4")
+            box.set_linewidth(1.2)
+        for whisker in bp["whiskers"]:
+            whisker.set_color("#1f77b4")
+            whisker.set_linewidth(1)
+        for cap in bp["caps"]:
+            cap.set_color("#1f77b4")
+            cap.set_linewidth(1)
+        for median in bp["medians"]:
+            median.set_color("#1f77b4")
+            median.set_linewidth(1.5)
+        for flier in bp["fliers"]:
+            flier.set_marker("o")
+            flier.set_markerfacecolor("none")
+            flier.set_markeredgecolor("#1f77b4")
+            flier.set_markersize(3)
+
+    station_ctx = {}
+
+    def ensure_ctx(station):
+        if station in station_ctx:
+            return station_ctx[station]
+        loaded = load_station_data(station)
+        if loaded is None:
+            station_ctx[station] = None
+            return None
+        df, date_col = loaded
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        df = df[df[date_col].notna()].copy()
+        pc = _find_precip_accum_column(df)
+        station_ctx[station] = None if pc is None else (df, date_col, pc)
+        return station_ctx[station]
+
+    def total_for(station, y, m):
+        ctx = ensure_ctx(station)
+        if ctx is None:
+            return None
+        df, date_col, pc = ctx
+        return _month_precip_total(df, date_col, pc, y, m)
+
+    n_rows = len(pairs)
+    fig, axes = plt.subplots(n_rows, 3, figsize=(10.5, 3.0 * n_rows), squeeze=False)
+    clim_years = list(range(climatology_start_year, year))
+    month_labels = [calendar.month_abbr[m] for m in months]
+
+    for row, (treat, ctrl) in enumerate(pairs):
+        lab_t = STATION_DISPLAY_NAMES.get(treat, treat)
+        lab_c = STATION_DISPLAY_NAMES.get(ctrl, ctrl)
+        for col, (title, kind) in enumerate(
+            [(lab_t, "t"), (lab_c, "c"), ("TREATMENT − CONTROL", "d")]
+        ):
+            ax = axes[row, col]
+            clim_by_m = []
+            rep_vals = []
+            for m in months:
+                vals = []
+                for y in clim_years:
+                    if kind == "t":
+                        v = total_for(treat, y, m)
+                    elif kind == "c":
+                        v = total_for(ctrl, y, m)
+                    else:
+                        a, b = total_for(treat, y, m), total_for(ctrl, y, m)
+                        v = (a - b) if a is not None and b is not None else None
+                    if v is not None and np.isfinite(v):
+                        vals.append(v)
+                clim_by_m.append(vals)
+                if kind == "t":
+                    rv = total_for(treat, year, m)
+                elif kind == "c":
+                    rv = total_for(ctrl, year, m)
+                else:
+                    a, b = total_for(treat, year, m), total_for(ctrl, year, m)
+                    rv = (a - b) if a is not None and b is not None else None
+                rep_vals.append(rv)
+
+            bp = ax.boxplot(
+                clim_by_m,
+                positions=list(range(1, len(months) + 1)),
+                widths=0.5,
+                tick_labels=month_labels,
+                showfliers=True,
+                patch_artist=True,
+            )
+            style_boxplot(bp)
+            for i, rv in enumerate(rep_vals, start=1):
+                if rv is not None and np.isfinite(rv):
+                    ax.scatter(
+                        [i],
+                        [rv],
+                        s=42,
+                        color="red",
+                        edgecolors="black",
+                        linewidths=1.1,
+                        zorder=25,
+                    )
+            ax.set_title(title, fontsize=10, fontweight="bold")
+            ax.tick_params(labelsize=8)
+            if kind == "d":
+                ax.axhline(0.0, color="black", linestyle="--", linewidth=1, alpha=0.5)
+                ax.set_ylabel("Difference (in)", fontsize=9)
+            else:
+                ax.set_ylabel("Accum precip (in)", fontsize=9)
+
+        tc = []
+        for m in months:
+            for y in clim_years:
+                for st in (treat, ctrl):
+                    v = total_for(st, y, m)
+                    if v is not None:
+                        tc.append(v)
+            for st in (treat, ctrl):
+                v = total_for(st, year, m)
+                if v is not None:
+                    tc.append(v)
+        if tc:
+            pad = 0.08 * max(max(tc) - min(tc), 0.05)
+            y0, y1 = max(0, min(tc) - pad), max(tc) + pad
+            axes[row, 0].set_ylim(y0, y1)
+            axes[row, 1].set_ylim(y0, y1)
+
+    start_name = calendar.month_name[months[0]]
+    end_name = calendar.month_name[months[-1]]
+    fig.suptitle(
+        f"{start_name}–{end_name} precipitation totals (SNOTEL) — treatment, control, and difference vs prior years",
+        fontsize=10,
+        y=1.01,
+    )
+    try:
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+    except Exception:
+        plt.subplots_adjust(hspace=0.4, wspace=0.3, top=0.92)
+
+    if output_file is None:
+        tag = f"{calendar.month_abbr[months[0]]}{calendar.month_abbr[months[-1]]}"
+        output_file = (
+            PLOTS_DIR / f"{year}{months[-1]:02d}_PrecipMonthTotal_{tag}_LaSalTreatments.{PLOT_FORMAT}"
+        )
+
+    plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches="tight")
+    print(f"Saved: {output_file}")
+    plt.close()
+    return output_file
+
+
 def _precip_accum_daily_series(df, date_col, prec_col):
     """Normalized-date index -> numeric accumulation (in)."""
     d = df[[date_col, prec_col]].copy()

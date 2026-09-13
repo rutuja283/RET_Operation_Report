@@ -21,6 +21,7 @@ from plot_generators import (
     plot_precipitation_summary,
     plot_snow_depth_boxplots,
     plot_month_precip_total_climatology_treatments,
+    plot_seasonal_precip_total_climatology,
     load_station_data,
     handle_snotel_cumulative,
 )
@@ -198,6 +199,19 @@ def generate_all_plots(month, year, operations_csv=None,
             print(f"   OK: {out}")
     except Exception as e:
         print(f"   Error: {e}")
+
+    # 5. Warm-season (April through report month) precip climatology
+    if month >= 4:
+        print("\n5. Generating April–report-month precip climatology boxplots...")
+        try:
+            season_months = list(range(4, month + 1))
+            out = plot_seasonal_precip_total_climatology(
+                season_months, year, pairs=REPORT_STATION_PAIRS
+            )
+            if out:
+                print(f"   OK: {out}")
+        except Exception as e:
+            print(f"   Error: {e}")
     
     print(f"\n{'='*60}")
     print("Plot generation complete!")
