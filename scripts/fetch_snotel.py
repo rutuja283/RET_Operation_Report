@@ -108,11 +108,12 @@ def fetch_snotel_for_report(month, year):
     Returns list of (station_name, success, message).
     """
     start_date = f"{SNOTEL_FETCH_START_YEAR}-01-01"
-    # End of report month (last day)
+    # Through first day of next month so start-of-day PREC can close the last
+    # calendar day (e.g. Aug 31 daily = Sep 1 PREC - Aug 31 PREC).
     if month == 12:
-        end_dt = datetime(year, 12, 31)
+        end_dt = datetime(year + 1, 1, 1)
     else:
-        end_dt = datetime(year, month + 1, 1) - timedelta(days=1)
+        end_dt = datetime(year, month + 1, 1)
     end_date = end_dt.strftime("%Y-%m-%d")
 
     results = []

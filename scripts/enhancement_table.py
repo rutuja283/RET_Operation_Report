@@ -4,7 +4,8 @@ Uses the report month's precipitation at **target stations only** (La sal upper,
 
 Enhancement follows MATLAB-style differencing (one value per site per year, not pooled daily diffs):
   - Snow depth & SWE: value on the **last calendar day** of the report month for target and control.
-  - Accum. precip: **month total** = accumulation on last day minus accumulation on the 1st (same as dry-year ranking).
+  - Accum. precip: **month total** = PREC(1st of next month) - PREC(1st of month)
+    (start-of-day; e.g. August = Sep 1 - Aug 1). Same for dry-year ranking.
   - expecteddiff = mean(target over 5 analog years) - mean(control over 5 analog years)
     (equivalently mean of yearly (target - control) for those years).
   - actualdiff = target(report year) - control(report year)
@@ -28,18 +29,31 @@ def _find_precip_accum_column(df):
 
 
 def _month_precip_total(df, date_col, prec_col, year, month):
-    """Total precipitation in calendar month = accum at end of month - accum at start of month. Used for ranking years."""
-    last_day = calendar.monthrange(year, month)[1]
-    start_date = f"{year}-{month:02d}-01"
-    end_date = f"{year}-{month:02d}-{last_day:02d}"
-    start_row = df[df[date_col].dt.strftime("%Y-%m-%d") == start_date]
-    end_row = df[df[date_col].dt.strftime("%Y-%m-%d") == end_date]
+    """
+    Calendar-month precip from SNOTEL start-of-day accumulation (inches).
+    Month total = PREC(first day of next month) - PREC(1st of month).
+    """
+    start_date = pd.Timestamp(year, month, 1)
+    if month == 12:
+        end_date = pd.Timestamp(year + 1, 1, 1)
+    else:
+        end_date = pd.Timestamp(year, month + 1, 1)
+    start_row = df[df[date_col].dt.normalize() == start_date]
+    end_row = df[df[date_col].dt.normalize() == end_date]
     if start_row.empty or end_row.empty:
         return None
     start_val = start_row.iloc[0][prec_col]
     end_val = end_row.iloc[0][prec_col]
     if pd.isna(start_val) or pd.isna(end_val):
         return None
+    # October 1 resets the water-year accumulation, so fall back to Sep 30.
+    if float(end_val) + 0.05 < float(start_val):
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = pd.Timestamp(year, month, last_day)
+        end_row = df[df[date_col].dt.normalize() == end_date]
+        if end_row.empty or pd.isna(end_row.iloc[0][prec_col]):
+            return None
+        end_val = end_row.iloc[0][prec_col]
     return float(end_val - start_val)
 
 

@@ -514,6 +514,21 @@ def generate_operations_table_latex(df, month, year):
     """
     events = _chronological_events(df)
     table_rows = _period_table_rows(events)
+    # If the last transition before month-end is ON and no OFF follows, show the
+    # remaining full days of the report month as operating.
+    if month is not None and year is not None:
+        import calendar as cal
+
+        month_end = pd.Timestamp(year, month, cal.monthrange(year, month)[1]) + pd.Timedelta(
+            hours=23, minutes=59
+        )
+        on_since = None
+        for ev in events:
+            if ev["ts"] > month_end:
+                break
+            on_since = ev["ts"] if ev["kind"] == "on" else None
+        if on_since is not None:
+            _append_interior_row(table_rows, on_since, month_end, is_on=True)
     table_rows = _rows_within_report_month(table_rows, month, year)
 
     # Generate LaTeX

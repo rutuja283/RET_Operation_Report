@@ -41,26 +41,28 @@ def get_water_year(date):
 
 def handle_snotel_cumulative(df, date_col, value_col):
     """
-    Convert cumulative SNOTEL data to daily increments
-    Handles water year reset on October 1st
+    Convert cumulative SNOTEL start-of-day accumulation to daily increments.
+
+    SNOTEL PREC is a start-of-day value, so rain that fell on calendar day D is
+    PREC(D+1) - PREC(D). Example: August 31 daily = Sep 1 PREC - Aug 31 PREC.
+    The last day in the series is NaN until the following day's PREC is available.
+    Handles water-year resets on October 1st.
     """
     df = df.copy()
     df[date_col] = pd.to_datetime(df[date_col])
     df = df.sort_values(date_col).reset_index(drop=True)
-    
+
     # Add water year column
     df['water_year'] = df[date_col].apply(get_water_year)
-    
-    # Calculate daily differences within each water year
-    df['daily_diff'] = df.groupby('water_year')[value_col].diff()
-    
-    # For first day of water year, use the value as-is (or 0 if reset)
-    first_day_mask = df.groupby('water_year')[date_col].transform('min') == df[date_col]
-    df.loc[first_day_mask, 'daily_diff'] = df.loc[first_day_mask, value_col]
-    
+
+    # Forward difference within each water year: daily[D] = PREC[D+1] - PREC[D]
+    df['daily_diff'] = (
+        df.groupby('water_year')[value_col].shift(-1) - df[value_col]
+    )
+
     # Handle negative differences (sensor corrections/resets) - set to NaN
     df.loc[df['daily_diff'] < 0, 'daily_diff'] = np.nan
-    
+
     return df[date_col], df['daily_diff']
 
 
@@ -324,19 +326,46 @@ def _find_precip_accum_column(df):
     return None
 
 
-def _month_precip_total(df, date_col, prec_col, year, month):
-    """Calendar-month precip from SNOTEL accumulation: last day minus first day of month (inches)."""
-    last_day = calendar.monthrange(year, month)[1]
-    start_date = f"{year}-{month:02d}-01"
-    end_date = f"{year}-{month:02d}-{last_day:02d}"
-    start_row = df[df[date_col].dt.strftime("%Y-%m-%d") == start_date]
-    end_row = df[df[date_col].dt.strftime("%Y-%m-%d") == end_date]
+def _month_precip_total(df, date_col, prec_col, year, month, *, close_with="next_month_start"):
+    """
+    Calendar-month precip from SNOTEL start-of-day accumulation (inches).
+
+    close_with:
+      - "next_month_start": PREC(1st of next month) - PREC(1st). Includes last-day rain
+        (e.g. August = Sep 1 - Aug 1).
+      - "month_end": PREC(last calendar day) - PREC(1st). Legacy method used for
+        earlier warm-season months in multi-month panels for consistency with
+        previously published figures.
+    """
+    start_date = pd.Timestamp(year, month, 1)
+    if close_with == "month_end":
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = pd.Timestamp(year, month, last_day)
+    elif close_with == "next_month_start":
+        if month == 12:
+            end_date = pd.Timestamp(year + 1, 1, 1)
+        else:
+            end_date = pd.Timestamp(year, month + 1, 1)
+    else:
+        raise ValueError(f"Unknown close_with={close_with!r}")
+    start_row = df[df[date_col].dt.normalize() == start_date]
+    end_row = df[df[date_col].dt.normalize() == end_date]
     if start_row.empty or end_row.empty:
         return None
     start_val = start_row.iloc[0][prec_col]
     end_val = end_row.iloc[0][prec_col]
     if pd.isna(start_val) or pd.isna(end_val):
         return None
+    # October 1 resets the SNOTEL water-year accumulation to 0, so
+    # PREC(Oct 1) - PREC(Sep 1) is not the September total. Fall back to
+    # the last day of the month (misses only rain after the Sep 30 reading).
+    if float(end_val) + 0.05 < float(start_val):
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = pd.Timestamp(year, month, last_day)
+        end_row = df[df[date_col].dt.normalize() == end_date]
+        if end_row.empty or pd.isna(end_row.iloc[0][prec_col]):
+            return None
+        end_val = end_row.iloc[0][prec_col]
     return float(end_val - start_val)
 
 
@@ -617,9 +646,9 @@ def plot_month_precip_total_climatology_treatments(
     """
     For each treatment–control pair, a row of three panels (like SWE boxplots):
     calendar-month precipitation total at treatment, at control, and treatment
-    minus control. Month total = SNOTEL accumulation on last day minus first day
-    of that month. Boxes = prior years (climatology_start_year .. year-1); red
-    markers = report year (excluded from boxes).
+    minus control. Month total = PREC(1st of next month) - PREC(1st of month)
+    (start-of-day SNOTEL; e.g. August = Sep 1 - Aug 1). Boxes = prior years
+    (climatology_start_year .. year-1); red markers = report year (excluded from boxes).
     """
     if pairs is None:
         pairs = [
@@ -785,10 +814,15 @@ def plot_seasonal_precip_total_climatology(
     pairs=None,
     climatology_start_year=2013,
     output_file=None,
+    new_method_from_month=8,
 ):
     """
     Multi-month boxplots (one row per pair): treatment, control, and difference
     across a list of calendar months. Boxes = prior years; red markers = report year.
+
+    For consistency with earlier published warm-season panels, months before
+    ``new_method_from_month`` use the legacy month-end − 1st total; from that
+    month onward (default August) use next-month-start − 1st (e.g. Sep 1 − Aug 1).
     """
     if pairs is None:
         pairs = [
@@ -833,12 +867,19 @@ def plot_seasonal_precip_total_climatology(
         station_ctx[station] = None if pc is None else (df, date_col, pc)
         return station_ctx[station]
 
+    def close_for(m):
+        if new_method_from_month is not None and m >= new_method_from_month:
+            return "next_month_start"
+        return "month_end"
+
     def total_for(station, y, m):
         ctx = ensure_ctx(station)
         if ctx is None:
             return None
         df, date_col, pc = ctx
-        return _month_precip_total(df, date_col, pc, y, m)
+        return _month_precip_total(
+            df, date_col, pc, y, m, close_with=close_for(m)
+        )
 
     n_rows = len(pairs)
     fig, axes = plt.subplots(n_rows, 3, figsize=(10.5, 3.0 * n_rows), squeeze=False)
