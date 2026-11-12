@@ -367,6 +367,7 @@ def _chronological_events(df):
     for _, row in df.sort_values("Date").iterrows():
         day = pd.Timestamp(row["Date"]).normalize()
         note = _note_from_status(row.get("Status_Text", ""))
+        row_events = []
         for col, kind in (("On_Time", "on"), ("Off_Time", "off")):
             tok = row.get(col)
             if tok is None or (isinstance(tok, float) and pd.isna(tok)):
@@ -375,14 +376,13 @@ def _chronological_events(df):
             if not hhmm:
                 continue
             ts = day + pd.Timedelta(hours=int(hhmm[:2]), minutes=int(hhmm[2:]))
-            events.append(
-                {
-                    "ts": ts,
-                    "kind": kind,
-                    "hhmm": hhmm,
-                    "note": note if kind == "on" else "",
-                }
-            )
+            row_events.append({"ts": ts, "kind": kind, "hhmm": hhmm, "note": ""})
+        # The operating record has one comment per row. Attach it to the ON event
+        # when the row has one; otherwise to the OFF event (e.g. "Shut down due
+        # to flood risk" on an off-only row).
+        if note and row_events:
+            row_events[0]["note"] = note
+        events.extend(row_events)
     events.sort(key=lambda e: e["ts"])
     return events
 
@@ -435,6 +435,13 @@ def _append_interior_row(rows, period_start, period_end, *, is_on):
             rows.append({"date": _fmt_mdy(first), "status": "off", "is_on": False})
 
 
+def _off_status(ev):
+    status = f"{ev['hhmm']} off"
+    if ev.get("note"):
+        status = f"{status} / {ev['note']}"
+    return status
+
+
 def _period_table_rows(events):
     """
     La Sal report style: transition rows with HHMM on/off; club multi-day off
@@ -456,7 +463,7 @@ def _period_table_rows(events):
                 rows.append(
                     {
                         "date": _fmt_mdy(off_ev["ts"]),
-                        "status": f"{off_ev['hhmm']} off",
+                        "status": _off_status(off_ev),
                         "is_on": False,
                     }
                 )
@@ -468,7 +475,7 @@ def _period_table_rows(events):
         rows.append(
             {
                 "date": _fmt_mdy(ev["ts"]),
-                "status": f"{ev['hhmm']} off",
+                "status": _off_status(ev),
                 "is_on": False,
             }
         )
@@ -514,21 +521,21 @@ def generate_operations_table_latex(df, month, year):
     """
     events = _chronological_events(df)
     table_rows = _period_table_rows(events)
-    # If the last transition before month-end is ON and no OFF follows, show the
-    # remaining full days of the report month as operating.
-    if month is not None and year is not None:
+    # If the record ends before month-end, carry the last state through the
+    # remaining full days of the report month (on after a final ON, off after a
+    # final OFF). When later events exist, _period_table_rows already covers
+    # the stretch up to the next transition.
+    if month is not None and year is not None and events:
         import calendar as cal
 
         month_end = pd.Timestamp(year, month, cal.monthrange(year, month)[1]) + pd.Timedelta(
             hours=23, minutes=59
         )
-        on_since = None
-        for ev in events:
-            if ev["ts"] > month_end:
-                break
-            on_since = ev["ts"] if ev["kind"] == "on" else None
-        if on_since is not None:
-            _append_interior_row(table_rows, on_since, month_end, is_on=True)
+        last_ev = events[-1]
+        if last_ev["ts"] <= month_end:
+            _append_interior_row(
+                table_rows, last_ev["ts"], month_end, is_on=last_ev["kind"] == "on"
+            )
     table_rows = _rows_within_report_month(table_rows, month, year)
 
     # Generate LaTeX
