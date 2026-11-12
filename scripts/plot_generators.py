@@ -636,6 +636,150 @@ def plot_snow_depth_boxplots(treatment_station, control_station, month, year,
     return output_file
 
 
+def _style_climatology_boxplot(bp):
+    for box in bp["boxes"]:
+        box.set_facecolor("#c6dbef")
+        box.set_edgecolor("#1f77b4")
+        box.set_linewidth(1.2)
+    for whisker in bp["whiskers"]:
+        whisker.set_color("#1f77b4")
+        whisker.set_linewidth(1)
+    for cap in bp["caps"]:
+        cap.set_color("#1f77b4")
+        cap.set_linewidth(1)
+    for median in bp["medians"]:
+        median.set_color("#1f77b4")
+        median.set_linewidth(1.5)
+    for flier in bp["fliers"]:
+        flier.set_marker("o")
+        flier.set_markerfacecolor("none")
+        flier.set_markeredgecolor("#1f77b4")
+        flier.set_markersize(3)
+        flier.set_alpha(0.9)
+
+
+def _plot_month_value_climatology(
+    month,
+    year,
+    pairs,
+    value_for,
+    ylabel,
+    suptitle,
+    output_file,
+    climatology_start_year=2013,
+    floor_at_zero=True,
+):
+    """
+    One row of three panels per treatment-control pair: treatment, control, and
+    treatment minus control. `value_for(station, year)` returns one value per
+    year for the report month (or None). Boxes = prior years
+    (climatology_start_year .. year-1); red markers = report year (excluded from boxes).
+    """
+    month_name = calendar.month_name[month]
+    n_rows = len(pairs)
+    fig, axes = plt.subplots(n_rows, 3, figsize=(8.8, 3.0 * n_rows), squeeze=False)
+
+    clim_years = [y for y in range(climatology_start_year, year) if y < year]
+    box_label = month_name  # x-axis tick: calendar month only (e.g. April)
+
+    for row, (treat, ctrl) in enumerate(pairs):
+        ax_t = axes[row, 0]
+        ax_c = axes[row, 1]
+        ax_d = axes[row, 2]
+
+        t_clim, c_clim, d_clim = [], [], []
+        for y in clim_years:
+            t = value_for(treat, y)
+            c = value_for(ctrl, y)
+            if t is not None and c is not None:
+                t_clim.append(t)
+                c_clim.append(c)
+                d_clim.append(t - c)
+
+        t_rep = value_for(treat, year)
+        c_rep = value_for(ctrl, year)
+        d_rep = None
+        if t_rep is not None and c_rep is not None:
+            d_rep = t_rep - c_rep
+
+        lab_t = STATION_DISPLAY_NAMES.get(treat, treat)
+        lab_c = STATION_DISPLAY_NAMES.get(ctrl, ctrl)
+
+        if len(t_clim) == 0:
+            for ax in (ax_t, ax_c, ax_d):
+                ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+            continue
+
+        for ax, vals, hi, title in (
+            (ax_t, t_clim, t_rep, lab_t),
+            (ax_c, c_clim, c_rep, lab_c),
+            (ax_d, d_clim, d_rep, "TREATMENT − CONTROL"),
+        ):
+            bp = ax.boxplot(
+                [vals],
+                positions=[1],
+                widths=0.45,
+                labels=[box_label],
+                showfliers=True,
+                patch_artist=True,
+            )
+            _style_climatology_boxplot(bp)
+            if hi is not None and np.isfinite(hi):
+                ax.scatter(
+                    [1],
+                    [hi],
+                    s=42,
+                    color="red",
+                    edgecolors="black",
+                    linewidths=1.1,
+                    zorder=25,
+                    marker="o",
+                )
+            ax.set_title(title, fontsize=10, fontweight="bold")
+            ax.tick_params(axis="both", labelsize=8)
+
+        ax_t.set_ylabel(ylabel, fontsize=9)
+        ax_c.set_ylabel(ylabel, fontsize=9)
+        ax_d.set_ylabel("Difference (in)", fontsize=9)
+        ax_d.axhline(0.0, color="black", linestyle="--", linewidth=1, alpha=0.5)
+
+        # Shared y-scale for treatment and control in this row
+        tc = np.array(t_clim + c_clim + ([t_rep, c_rep] if t_rep is not None and c_rep is not None else []), dtype=float)
+        tc = tc[np.isfinite(tc)]
+        if tc.size:
+            pad = 0.08 * max(float(np.nanmax(tc) - np.nanmin(tc)), 0.05)
+            y0 = float(np.nanmin(tc)) - pad
+            if floor_at_zero:
+                y0 = max(0.0, y0)
+            y1 = float(np.nanmax(tc)) + pad
+            ax_t.set_ylim(y0, y1)
+            ax_c.set_ylim(y0, y1)
+
+        dd = np.array(d_clim + ([d_rep] if d_rep is not None else []), dtype=float)
+        dd = dd[np.isfinite(dd)]
+        if dd.size:
+            d_pad = 0.1 * max(float(np.nanmax(dd) - np.nanmin(dd)), 0.05)
+            ax_d.set_ylim(float(np.nanmin(dd)) - d_pad, float(np.nanmax(dd)) + d_pad)
+
+    fig.suptitle(suptitle, fontsize=10, y=1.01)
+    try:
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+    except Exception:
+        plt.subplots_adjust(hspace=0.4, wspace=0.3, top=0.92)
+
+    plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches="tight")
+    print(f"Saved: {output_file}")
+    plt.close()
+    return output_file
+
+
+def _default_report_pairs():
+    return [
+        ("La sal upper", "Buckboard Flat"),
+        ("Lasal Mtn lower", "Camp jackson"),
+    ]
+
+
 def plot_month_precip_total_climatology_treatments(
     month,
     year,
@@ -651,33 +795,7 @@ def plot_month_precip_total_climatology_treatments(
     (climatology_start_year .. year-1); red markers = report year (excluded from boxes).
     """
     if pairs is None:
-        pairs = [
-            ("La sal upper", "Buckboard Flat"),
-            ("Lasal Mtn lower", "Camp jackson"),
-        ]
-
-    month_name = calendar.month_name[month]
-
-    def style_boxplot(bp):
-        for box in bp["boxes"]:
-            box.set_facecolor("#c6dbef")
-            box.set_edgecolor("#1f77b4")
-            box.set_linewidth(1.2)
-        for whisker in bp["whiskers"]:
-            whisker.set_color("#1f77b4")
-            whisker.set_linewidth(1)
-        for cap in bp["caps"]:
-            cap.set_color("#1f77b4")
-            cap.set_linewidth(1)
-        for median in bp["medians"]:
-            median.set_color("#1f77b4")
-            median.set_linewidth(1.5)
-        for flier in bp["fliers"]:
-            flier.set_marker("o")
-            flier.set_markerfacecolor("none")
-            flier.set_markeredgecolor("#1f77b4")
-            flier.set_markersize(3)
-            flier.set_alpha(0.9)
+        pairs = _default_report_pairs()
 
     # Load each station once
     station_ctx = {}
@@ -706,106 +824,92 @@ def plot_month_precip_total_climatology_treatments(
         df, date_col, pc = ctx
         return _month_precip_total(df, date_col, pc, y, month)
 
-    n_rows = len(pairs)
-    fig, axes = plt.subplots(n_rows, 3, figsize=(8.8, 3.0 * n_rows), squeeze=False)
-
-    clim_years = [y for y in range(climatology_start_year, year) if y < year]
-    box_label = month_name  # x-axis tick: calendar month only (e.g. April)
-
-    for row, (treat, ctrl) in enumerate(pairs):
-        ax_t = axes[row, 0]
-        ax_c = axes[row, 1]
-        ax_d = axes[row, 2]
-
-        t_clim, c_clim, d_clim = [], [], []
-        for y in clim_years:
-            t = total_for(treat, y)
-            c = total_for(ctrl, y)
-            if t is not None and c is not None:
-                t_clim.append(t)
-                c_clim.append(c)
-                d_clim.append(t - c)
-
-        t_rep = total_for(treat, year)
-        c_rep = total_for(ctrl, year)
-        d_rep = None
-        if t_rep is not None and c_rep is not None:
-            d_rep = t_rep - c_rep
-
-        lab_t = STATION_DISPLAY_NAMES.get(treat, treat)
-        lab_c = STATION_DISPLAY_NAMES.get(ctrl, ctrl)
-
-        if len(t_clim) == 0:
-            for ax in (ax_t, ax_c, ax_d):
-                ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
-            continue
-
-        for ax, vals, hi, title in (
-            (ax_t, t_clim, t_rep, lab_t),
-            (ax_c, c_clim, c_rep, lab_c),
-            (ax_d, d_clim, d_rep, "TREATMENT − CONTROL"),
-        ):
-            bp = ax.boxplot(
-                [vals],
-                positions=[1],
-                widths=0.45,
-                labels=[box_label],
-                showfliers=True,
-                patch_artist=True,
-            )
-            style_boxplot(bp)
-            if hi is not None and np.isfinite(hi):
-                ax.scatter(
-                    [1],
-                    [hi],
-                    s=42,
-                    color="red",
-                    edgecolors="black",
-                    linewidths=1.1,
-                    zorder=25,
-                    marker="o",
-                )
-            ax.set_title(title, fontsize=10, fontweight="bold")
-            ax.tick_params(axis="both", labelsize=8)
-
-        ax_t.set_ylabel("Accum precip (in)", fontsize=9)
-        ax_c.set_ylabel("Accum precip (in)", fontsize=9)
-        ax_d.set_ylabel("Difference (in)", fontsize=9)
-        ax_d.axhline(0.0, color="black", linestyle="--", linewidth=1, alpha=0.5)
-
-        # Shared y-scale for treatment and control in this row
-        tc = np.array(t_clim + c_clim + ([t_rep, c_rep] if t_rep is not None and c_rep is not None else []), dtype=float)
-        tc = tc[np.isfinite(tc)]
-        if tc.size:
-            pad = 0.08 * max(float(np.nanmax(tc) - np.nanmin(tc)), 0.05)
-            y0 = max(0.0, float(np.nanmin(tc)) - pad)
-            y1 = float(np.nanmax(tc)) + pad
-            ax_t.set_ylim(y0, y1)
-            ax_c.set_ylim(y0, y1)
-
-        dd = np.array(d_clim + ([d_rep] if d_rep is not None else []), dtype=float)
-        dd = dd[np.isfinite(dd)]
-        if dd.size:
-            d_pad = 0.1 * max(float(np.nanmax(dd) - np.nanmin(dd)), 0.05)
-            ax_d.set_ylim(float(np.nanmin(dd)) - d_pad, float(np.nanmax(dd)) + d_pad)
-
-    fig.suptitle(
-        f"{month_name} precipitation total (SNOTEL) — treatment, control, and difference vs prior years",
-        fontsize=10,
-        y=1.01,
-    )
-    try:
-        plt.tight_layout(rect=[0, 0, 1, 0.96])
-    except Exception:
-        plt.subplots_adjust(hspace=0.4, wspace=0.3, top=0.92)
-
     if output_file is None:
         output_file = PLOTS_DIR / f"{year}{month:02d}_PrecipMonthTotal_LaSalTreatments.{PLOT_FORMAT}"
 
-    plt.savefig(output_file, dpi=PLOT_DPI, bbox_inches="tight")
-    print(f"Saved: {output_file}")
-    plt.close()
-    return output_file
+    return _plot_month_value_climatology(
+        month,
+        year,
+        pairs,
+        total_for,
+        ylabel="Accum precip (in)",
+        suptitle=(
+            f"{calendar.month_name[month]} precipitation total (SNOTEL) — "
+            "treatment, control, and difference vs prior years"
+        ),
+        output_file=output_file,
+        climatology_start_year=climatology_start_year,
+    )
+
+
+def _month_swe_mean(df, date_col, swe_col, year, month, min_fraction=0.9):
+    """
+    Mean of daily SNOTEL snow water equivalent (inches, start-of-day values) over a
+    calendar month. Returns None when fewer than `min_fraction` of the days report.
+    """
+    days = calendar.monthrange(year, month)[1]
+    dates = df[date_col].dt.normalize()
+    sel = df[(dates >= pd.Timestamp(year, month, 1)) & (dates <= pd.Timestamp(year, month, days))]
+    vals = pd.to_numeric(sel[swe_col], errors="coerce").dropna()
+    if len(vals) < int(np.ceil(min_fraction * days)):
+        return None
+    return float(vals.mean())
+
+
+def plot_month_swe_mean_climatology_treatments(
+    month,
+    year,
+    pairs=None,
+    climatology_start_year=2013,
+    output_file=None,
+):
+    """
+    Same layout as plot_month_precip_total_climatology_treatments, for snow water
+    equivalent: one row per treatment–control pair showing the calendar-month mean of
+    daily SWE at treatment, at control, and treatment minus control. Boxes = prior years
+    (climatology_start_year .. year-1); red markers = report year (excluded from boxes).
+    """
+    if pairs is None:
+        pairs = _default_report_pairs()
+
+    station_ctx = {}
+
+    def ensure_ctx(station):
+        if station in station_ctx:
+            return station_ctx[station]
+        station_ctx[station] = None
+        loaded = load_station_data(station)
+        if loaded is not None:
+            df, date_col = loaded
+            swe_col, kind = _find_swe_or_snow_depth_column(df, prefer_swe=True)
+            if kind == "swe":
+                station_ctx[station] = (df, date_col, swe_col)
+        return station_ctx[station]
+
+    def mean_for(station, y):
+        ctx = ensure_ctx(station)
+        if ctx is None:
+            return None
+        df, date_col, swe_col = ctx
+        return _month_swe_mean(df, date_col, swe_col, y, month)
+
+    if output_file is None:
+        output_file = PLOTS_DIR / f"{year}{month:02d}_SWEMonthMean_LaSalTreatments.{PLOT_FORMAT}"
+
+    return _plot_month_value_climatology(
+        month,
+        year,
+        pairs,
+        mean_for,
+        ylabel="Mean SWE (in)",
+        suptitle=(
+            f"{calendar.month_name[month]} mean snow water equivalent (SNOTEL) — "
+            "treatment, control, and difference vs prior years"
+        ),
+        output_file=output_file,
+        climatology_start_year=climatology_start_year,
+        floor_at_zero=False,
+    )
 
 
 def plot_seasonal_precip_total_climatology(

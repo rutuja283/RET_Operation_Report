@@ -156,12 +156,12 @@ on October 2026.
   target-minus-control differences were negative. The month was exceptionally wet across the
   region, and a single month does not support definitive attribution.
   \item Ridge, BSTS, and analog-year estimates for October precipitation and snow water
-  equivalent (Section~\ref{sec:estimates}) do not indicate enhancement at La Sal Upper or
-  La Sal Lower.
+  equivalent do not indicate enhancement at La Sal Upper or La Sal Lower.
   \item The first snow of the season was recorded in mid-October. Snow cover was shallow and
   short-lived at La Sal Upper and La Sal Lower and was still present at Gold Basin at the end
-  of the month. Because the snowpack was only beginning to form, this report continues to
-  focus on accumulated precipitation.
+  of the month. October snow water equivalent was within the range of previous Octobers at
+  every site (Figure~\ref{fig:swe_month_clim}). Because the snowpack was only beginning to
+  form, this report continues to focus on accumulated precipitation.
   \item The longest continuous operating period was 7 days, from 10/07/2026 to 10/13/2026.
 \end{enumerate}
 
@@ -249,7 +249,7 @@ to westerly flow, and sufficiently removed from the intended treatment area to m
 likelihood of treatment influence. On this basis the analysis adopts three pairs: La Sal Upper
 with Buckboard Flat, La Sal Lower with Camp Jackson (assigned on elevation match and to avoid
 dependence of all pairs on a single control gauge), and Gold Basin with Buckboard Flat. These
-are the pairs presented in Figures~\ref{fig:precip_month_clim} and~\ref{fig:precip_season}.
+are the pairs presented in Figures~\ref{fig:precip_month_clim} and~\ref{fig:swe_month_clim}.
 
 Two further groups of stations were examined and assigned supporting rather than primary roles.
 Three SNOTEL sites in adjacent ranges---Columbine Pass, Lone Cone and East Willow
@@ -293,13 +293,15 @@ Turning to the reporting period, the following observations are made.
         interpreted with caution: the site entered service in October 2021, so only a few paired
         October observations are available and its climatological range is correspondingly
         poorly constrained.
-  \item Viewed across April--October (Figure~\ref{fig:precip_season}), October is by far the
-        wettest 2026 month at the targets and at the controls. The September and October
-        differences are the most negative of the period at all three pairs, and both occurred
-        in months when the Abajo controls were unusually wet.
-  \item Ridge, BSTS, and analog-year estimates for October are given in
-        Section~\ref{sec:estimates} and Table~\ref{tab:enhancement}. None indicates
-        enhancement.
+  \item October snow water equivalent was low, as expected this early in the season
+        (Figure~\ref{fig:swe_month_clim}). The October mean at every target and control site
+        was within the range of previous Octobers, and so were the target-minus-control
+        differences at all three pairs. The snow water equivalent comparison therefore shows
+        no departure from climatology.
+  \item Ridge, BSTS, and analog-year estimates were also examined for October precipitation
+        and snow water equivalent at La Sal Upper and La Sal Lower. None indicates
+        enhancement. Because the Abajo controls were far outside their previous October
+        range, these estimates are extrapolations and are not reported numerically.
 \end{enumerate}
  
 
@@ -318,101 +320,14 @@ Turning to the reporting period, the following observations are made.
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=\textwidth]{plots/202610_PrecipMonthTotal_AprOct_LaSalTreatments.png}
-  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological April through
-  October accumulated precipitation at La Sal Upper, Buckboard Flat, and the difference;
-  La Sal Lower, Camp Jackson, and the difference; and Gold Basin, Buckboard Flat, and the
-  difference. Red circles indicate values for 2026.}
-  \label{fig:precip_season}
+  \includegraphics[width=\textwidth]{plots/202610_SWEMonthMean_LaSalTreatments.png}
+  \caption{Box and whisker plots demonstrating SNOTEL-measured climatological October snow
+  water equivalent at (top row, left to right) La Sal Upper, Buckboard Flat, and the difference;
+  (middle row) La Sal Lower, Camp Jackson, and the difference; and (bottom row) Gold Basin,
+  Buckboard Flat, and the difference. Each value is the mean of daily snow water equivalent
+  over October. Red circles indicate October 2026.}
+  \label{fig:swe_month_clim}
 \end{figure}
-
-\clearpage
-
-\subsection{Ridge, BSTS, and Analog-Year Estimates}
-\label{sec:estimates}
-
-Table~\ref{tab:enhancement} gives three estimates of the October 2026 departure from expected
-conditions at La Sal Upper and La Sal Lower, for accumulated precipitation and for snow water
-equivalent (SWE). Each estimate is the observed value minus the value expected from the paired
-Abajo control, so a positive number means more precipitation or SWE at the target than
-expected.
-
-\begin{itemize}
-  \item \textbf{Analog years.} The expected target-minus-control difference is the mean of
-        that difference in the five driest Octobers since 2013 at the La Sal sites (2014,
-        2016, 2017, 2019, and 2023). The estimate is the October 2026 difference minus that
-        mean. SWE is taken on 31 October.
-  \item \textbf{Ridge.} A ridge regression trained on daily October data from 2013--2025
-        predicts daily target precipitation, and the daily target-minus-control SWE
-        difference, from control precipitation and temperature, including recent and
-        accumulated control precipitation.
-  \item \textbf{BSTS.} A Bayesian structural time-series model trained on the same years
-        predicts the target October precipitation total from the control total, and daily
-        target SWE from daily control SWE.
-\end{itemize}
-
-For Ridge and BSTS, SWE is the October mean of daily values, and the 95\% interval is the
-estimate $\pm 1.96$ times the standard deviation of the leave-one-year-out errors for the
-thirteen Octobers of 2013--2025. October 2026 is not used to fit either model. Ridge and BSTS
-precipitation follows the daily differencing convention of the model scripts, which covers
-1--30 October and leaves out precipitation that fell on 31 October; the analog-year method
-uses the full October total.
-
-\begin{table}[h!]
-  \centering
-  \renewcommand{\arraystretch}{1.25}
-  \arrayrulecolor{tableborder}
-  \begin{tabular}{|l|l|c|c|}
-  \hline
-  \rowcolor{headerbg}
-  \textbf{Method} & \textbf{Site} & \textbf{Precipitation (in)} & \textbf{SWE (in)} \\
-  \hline
-  Analog years & La Sal Upper & $-7.18$ & $+0.10$ \\
-  \hline
-  Analog years & La Sal Lower & $-3.08$ & $+0.02$ \\
-  \hline
-  Ridge & La Sal Upper & $+0.40$ ($-2.85$ to $+3.65$) & $-0.39$ ($-1.06$ to $+0.27$) \\
-  \hline
-  Ridge & La Sal Lower & $+1.48$ ($-1.11$ to $+4.07$) & $+0.07$ ($-0.30$ to $+0.44$) \\
-  \hline
-  BSTS & La Sal Upper & $-3.62$ ($-7.32$ to $+0.08$) & $+0.11$ ($-0.50$ to $+0.73$) \\
-  \hline
-  BSTS & La Sal Lower & $-0.13$ ($-3.27$ to $+3.02$) & $+0.01$ ($-0.29$ to $+0.32$) \\
-  \hline
-  \end{tabular}
-  \caption{Estimated October 2026 departure from expected precipitation and SWE at La Sal Upper
-  (control: Buckboard Flat) and La Sal Lower (control: Camp Jackson), as observed minus
-  expected. Values in parentheses are 95\% intervals. Precipitation is the full October total
-  for the analog-year method and the 1--30 October total for Ridge and BSTS. SWE is the value
-  on 31 October for the analog-year method and the October mean of daily values for Ridge and
-  BSTS.}
-  \label{tab:enhancement}
-\end{table}
-
-None of the three methods indicates enhancement in October. For precipitation, the
-analog-year estimate is negative at both sites. The Ridge estimate is positive at both sites
-and the BSTS estimate is negative at both. All four of those intervals span zero, although
-the BSTS interval at La Sal Upper lies almost entirely below it. For SWE, every
-estimate is a few tenths of an inch or less and every interval spans zero; October snow cover
-at these two sites was shallow and short-lived.
-
-These estimates should be read with caution, for three reasons.
-
-\begin{enumerate}
-  \item The Abajo controls were far outside the range on which Ridge and BSTS were trained:
-        the October 2026 total was about twice the previous October maximum at Buckboard Flat
-        and about one and a half times at Camp Jackson. Both models are therefore
-        extrapolating, and they disagree most at La Sal Upper, where the control was furthest
-        out of range. A BSTS error larger than the La Sal Upper estimate occurred in
-        October 2025, before WETA operations began.
-  \item The analog years are dry Octobers, whereas October 2026 was the wettest of the
-        comparison record at the La Sal sites.
-        Selecting the five wettest Octobers instead leaves both precipitation estimates
-        negative.
-  \item The Ridge and BSTS models were developed for December--February SWE and
-        April--August precipitation. They are applied to October here without separate
-        validation for that month.
-\end{enumerate}
 
 \clearpage
 
