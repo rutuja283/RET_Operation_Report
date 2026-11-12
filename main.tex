@@ -379,7 +379,10 @@ expected.
 
 For Ridge and BSTS, SWE is the October mean of daily values, and the 95\% interval is the
 estimate $\pm 1.96$ times the standard deviation of the leave-one-year-out errors for the
-thirteen Octobers of 2013--2025. October 2026 is not used to fit either model.
+thirteen Octobers of 2013--2025. October 2026 is not used to fit either model. Ridge and BSTS
+precipitation follows the daily differencing convention of the model scripts, which covers
+1--30 October and leaves out precipitation that fell on 31 October; the analog-year method
+uses the full October total.
 
 \begin{table}[h!]
   \centering
@@ -394,27 +397,28 @@ thirteen Octobers of 2013--2025. October 2026 is not used to fit either model.
   \hline
   Analog years & La Sal Lower & $-3.08$ & $+0.02$ \\
   \hline
-  Ridge & La Sal Upper & $+0.07$ ($-3.42$ to $+3.56$) & $-0.39$ ($-1.06$ to $+0.27$) \\
+  Ridge & La Sal Upper & $+0.40$ ($-2.85$ to $+3.65$) & $-0.39$ ($-1.06$ to $+0.27$) \\
   \hline
-  Ridge & La Sal Lower & $+1.04$ ($-1.67$ to $+3.74$) & $+0.07$ ($-0.30$ to $+0.44$) \\
+  Ridge & La Sal Lower & $+1.48$ ($-1.11$ to $+4.07$) & $+0.07$ ($-0.30$ to $+0.44$) \\
   \hline
-  BSTS & La Sal Upper & $-4.20$ ($-7.93$ to $-0.47$) & $+0.11$ ($-0.50$ to $+0.73$) \\
+  BSTS & La Sal Upper & $-3.62$ ($-7.32$ to $+0.08$) & $+0.11$ ($-0.50$ to $+0.73$) \\
   \hline
-  BSTS & La Sal Lower & $-0.37$ ($-3.54$ to $+2.80$) & $+0.01$ ($-0.29$ to $+0.32$) \\
+  BSTS & La Sal Lower & $-0.13$ ($-3.27$ to $+3.02$) & $+0.01$ ($-0.29$ to $+0.32$) \\
   \hline
   \end{tabular}
   \caption{Estimated October 2026 departure from expected precipitation and SWE at La Sal Upper
   (control: Buckboard Flat) and La Sal Lower (control: Camp Jackson), as observed minus
-  expected. Values in parentheses are 95\% intervals. Precipitation is the October total.
-  SWE is the value on 31 October for the analog-year method and the October mean of daily
-  values for Ridge and BSTS.}
+  expected. Values in parentheses are 95\% intervals. Precipitation is the full October total
+  for the analog-year method and the 1--30 October total for Ridge and BSTS. SWE is the value
+  on 31 October for the analog-year method and the October mean of daily values for Ridge and
+  BSTS.}
   \label{tab:enhancement}
 \end{table}
 
 None of the three methods indicates enhancement in October. For precipitation, the
-analog-year estimate is negative at both sites. The Ridge estimate is near zero at La Sal
-Upper and positive at La Sal Lower, with intervals that span zero at both. The BSTS estimate
-is negative at both sites, and its interval at La Sal Upper lies below zero. For SWE, every
+analog-year estimate is negative at both sites. The Ridge estimate is positive at both sites
+and the BSTS estimate is negative at both. All four of those intervals span zero, although
+the BSTS interval at La Sal Upper lies almost entirely below it. For SWE, every
 estimate is a few tenths of an inch or less and every interval spans zero; October snow cover
 at these two sites was shallow and short-lived.
 
@@ -425,7 +429,7 @@ These estimates should be read with caution, for three reasons.
         the October 2026 total was about twice the previous October maximum at Buckboard Flat
         and about one and a half times at Camp Jackson. Both models are therefore
         extrapolating, and they disagree most at La Sal Upper, where the control was furthest
-        out of range. A BSTS error of similar size to the La Sal Upper estimate occurred in
+        out of range. A BSTS error larger than the La Sal Upper estimate occurred in
         October 2025, before WETA operations began.
   \item The analog years are dry Octobers, whereas October 2026 was the wettest of the
         comparison record at the La Sal sites.
